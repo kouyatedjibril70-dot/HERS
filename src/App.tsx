@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, LayersControl, CircleMarker, ZoomControl, useMap } from "react-leaflet";
-import { Search, SlidersHorizontal, Map as MapIcon, BarChart3, Users, Globe, X, ChevronRight, RotateCcw, MapPin } from "lucide-react";
+import { Search, SlidersHorizontal, Map as MapIcon, BarChart3, Users, Globe, X, ChevronRight, RotateCcw, MapPin, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import communities from "./data/communities.json";
 // Identifiant stable, indépendant du rang/score (le rang change à chaque pondération — s'en servir
 // comme clé React forçait Leaflet à détruire/recréer ~1300 marqueurs à chaque glissement de curseur).
@@ -80,6 +80,100 @@ function LangsPanel({data}:{data:Community[]}){
 }
 function Recenter({center}:{center:[number,number]}){const map=useMap();useEffect(()=>{map.setView(center,6)},[map,center[0],center[1]]);return null}
 function Table({rows,onSelect}:{rows:Community[];onSelect:(r:Community)=>void}){return <div className="table-scroll"><table><thead><tr><th>Rang</th><th>Communauté</th><th>Pays</th><th>Région</th><th>Langue</th><th>{withPrcc("PRCC")}</th><th>Distance</th><th>Score</th><th>Statut</th></tr></thead><tbody>{rows.map(r=><tr key={r._id} onClick={()=>onSelect(r)}><td>#{r.rank}</td><td className="name">{r.Communauté}</td><td>{r.Pays}</td><td>{r.Région}</td><td>{r["Langue normalisée"]}</td><td>{r["Année Début PRCC"]}–{r["Année Fin PRCC"]}</td><td>{Number(r["Distance bureau (km)"]).toFixed(0)} km</td><td><b>{r.score.toFixed(1)}</b></td><td><span className={r.selected?"tag yes":"tag"}>{r.selected?"Sélectionnée":"Hors sélection"}</span></td></tr>)}</tbody></table></div>}
+
+// Tableau complet de la page « Communautés » : en-têtes triables + ligne de filtres par colonne.
+type CCol = { key: string; label: string; kind: "text" | "num" | "pill-pays" | "prcc" | "score" | "pill-statut"; filter: "text" | "select" | null; get: (r: Community) => string | number; options?: string[] };
+function CommunitiesTable({ rows, onSelect }: { rows: Community[]; onSelect: (r: Community) => void }) {
+  const [sortKey, setSortKey] = useState("rank");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [flt, setFlt] = useState<Record<string, string>>({});
+  const langOptions = useMemo(() => Array.from(new Set(rows.map((r) => r["Langue normalisée"]).filter(Boolean) as string[])).sort(), [rows]);
+
+  const cols: CCol[] = [
+    { key: "Communauté", label: "Communauté", kind: "text", filter: "text", get: (r) => r.Communauté ?? "" },
+    { key: "Pays", label: "Pays", kind: "pill-pays", filter: "select", options: ["Sénégal", "Gambie"], get: (r) => r.Pays ?? "" },
+    { key: "Région", label: "Région", kind: "text", filter: "text", get: (r) => r.Région ?? "" },
+    { key: "Niveau2", label: "Département", kind: "text", filter: "text", get: (r) => r.Niveau2 ?? "" },
+    { key: "Commune", label: "Commune", kind: "text", filter: "text", get: (r) => r.Commune ?? "" },
+    { key: "Langue normalisée", label: "Langue", kind: "text", filter: "select", options: langOptions, get: (r) => r["Langue normalisée"] ?? "" },
+    { key: "Année Fin PRCC", label: "Fin PRCC", kind: "prcc", filter: null, get: (r) => Number(r["Année Fin PRCC"]) || 0 },
+    { key: "Distance bureau (km)", label: "Distance", kind: "num", filter: null, get: (r) => Number(r["Distance bureau (km)"]) || 0 },
+    { key: "score", label: "Score", kind: "score", filter: null, get: (r) => r.score },
+    { key: "selected", label: "Statut", kind: "pill-statut", filter: "select", options: ["Sélectionnée", "Hors sélection"], get: (r) => (r.selected ? "Sélectionnée" : "Hors sélection") },
+  ];
+
+  const view = useMemo(() => {
+    let out = rows;
+    for (const c of cols) {
+      const v = flt[c.key];
+      if (!v) continue;
+      if (c.filter === "text") out = out.filter((r) => String(c.get(r)).toLowerCase().includes(v.toLowerCase()));
+      else if (c.filter === "select") out = out.filter((r) => String(c.get(r)) === v);
+    }
+    const c = cols.find((x) => x.key === sortKey);
+    const cmp = (a: Community, b: Community): number => {
+      if (!c) return a.rank - b.rank;
+      const va = c.get(a), vb = c.get(b);
+      const n = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb), "fr");
+      return sortDir === "asc" ? n : -n;
+    };
+    return [...out].sort(cmp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, flt, sortKey, sortDir, langOptions]);
+
+  const clickHead = (k: string) => {
+    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir("asc"); }
+  };
+  const SortIc = ({ k }: { k: string }) => sortKey !== k ? <ArrowUpDown size={12} className="sort-ic" /> : sortDir === "asc" ? <ArrowUp size={12} className="sort-ic on" /> : <ArrowDown size={12} className="sort-ic on" />;
+
+  const shown = view.slice(0, 300);
+  return (
+    <div className="ctable-wrap">
+      <table className="ctable">
+        <thead>
+          <tr>
+            {cols.map((c) => (
+              <th key={c.key} className={sortKey === c.key ? "sorted" : ""} onClick={() => clickHead(c.key)}>
+                {withPrcc(c.label)}<SortIc k={c.key} />
+              </th>
+            ))}
+          </tr>
+          <tr className="filters">
+            {cols.map((c) => (
+              <th key={c.key}>
+                {c.filter === "text" && <input placeholder="Filtrer…" value={flt[c.key] ?? ""} onClick={(e) => e.stopPropagation()} onChange={(e) => setFlt((p) => ({ ...p, [c.key]: e.target.value }))} />}
+                {c.filter === "select" && (
+                  <select value={flt[c.key] ?? ""} onClick={(e) => e.stopPropagation()} onChange={(e) => setFlt((p) => ({ ...p, [c.key]: e.target.value }))}>
+                    <option value="">Tous</option>
+                    {(c.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((r) => (
+            <tr key={r._id} onClick={() => onSelect(r)}>
+              {cols.map((c) => {
+                const val = c.get(r);
+                if (c.key === "Communauté") return <td key={c.key} className="c-name">{r.Communauté}</td>;
+                if (c.kind === "pill-pays") return <td key={c.key}><span className="c-pill" style={{ background: r.Pays === "Sénégal" ? "#dcfce7" : "#dbeafe", color: r.Pays === "Sénégal" ? "#15803d" : "#1e40af" }}>{r.Pays}</span></td>;
+                if (c.kind === "pill-statut") return <td key={c.key}><span className="c-pill" style={{ background: r.selected ? "#dcfce7" : "#f1f5f9", color: r.selected ? "#15803d" : "#64748b" }}>{r.selected ? "Sélectionnée" : "Hors sélection"}</span></td>;
+                if (c.kind === "prcc") return <td key={c.key}>{r["Année Début PRCC"]} → {r["Année Fin PRCC"]}</td>;
+                if (c.kind === "num") return <td key={c.key}>{Number(val).toFixed(0)} km</td>;
+                if (c.kind === "score") return <td key={c.key}><div className="c-score"><div className="bar"><i style={{ width: `${Math.max(0, Math.min(100, r.score))}%` }} /></div><b>{r.score.toFixed(0)}</b></div></td>;
+                return <td key={c.key}>{String(val)}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="footnote" style={{ padding: "8px 12px 0" }}>{view.length} résultat(s) · 300 lignes affichées au maximum. Cliquez une en-tête pour trier, utilisez les champs sous les titres pour filtrer.</p>
+    </div>
+  );
+}
 export default function App(){
  const [country,setCountry]=useState("Tous"),[region,setRegion]=useState("Toutes"),[lang,setLang]=useState("Toutes"),[bureau,setBureau]=useState("Tous"),[query,setQuery]=useState(""),[only,setOnly]=useState(false),[showSel,setShowSel]=useState(true),[showUnsel,setShowUnsel]=useState(true),[tab,setTab]=useState<"dashboard"|"communities"|"spatial">("dashboard"),[drawer,setDrawer]=useState<Community|null>(null);
  const [targets,setTargets]=useState({Sénégal:642,Gambie:161}),[weights,setWeights]=useState({pop:0,dist:45,dens:20,recent:35,duration:0});
@@ -107,7 +201,7 @@ export default function App(){
  <div className="side-card weight-card"><div className="card-title"><SlidersHorizontal size={17}/> Pondération du score</div><p className="muted">Testez différents scénarios. Le score est recalculé automatiquement.</p>{([["pop","Population","Nombre d'habitants de la communauté"],["dist","Distance bureau","Distance au bureau de coordination le plus proche"],["dens","Densité / proximité","Nombre d'autres communautés dans un rayon de 25 km"],["recent","Récence PRCC","Ancienneté de la fin du PRCC — plus c'est récent, mieux c'est"],["duration","Durée PRCC","Nombre d'années entre le début et la fin du PRCC"]] as [string,string,string][]).map(([k,l,tip])=>{const v=(weights as any)[k];const p=v/50*100;return <div className="weight" key={k}><span className="wlabel" data-tip={tip}>{withPrcc(l)}</span><input type="range" min={0} max={50} step={5} value={v} style={{background:`linear-gradient(90deg,#60a5fa 0 ${p}%,#e2e8f0 ${p}% 100%)`}} onChange={e=>setWeights({...weights,[k]:Number(e.target.value)})}/><b className="wval">{v}</b></div>;})}<div className="weight-total"><span>Total</span><b>{Object.values(weights).reduce((a,b)=>a+b,0)}</b><small>/ 100</small><div className="wprog"><i style={{width:`${Math.min(100,Object.values(weights).reduce((a,b)=>a+b,0))}%`}}/></div></div><button className="linkbtn" onClick={()=>setWeights({pop:0,dist:45,dens:20,recent:35,duration:0})}>Réinitialiser</button><div className="callout"><b>Langue</b><span>La langue n'influence pas le score, mais on vérifie qu'aucune langue n'est mise de côté par les autres critères — utile pour anticiper les besoins en animateurs par langue.</span></div><div className="callout warn"><b>Population Gambie</b><span>Non disponible dans la base actuelle.</span></div></div>
  <div className="table-card"><div className="card-head"><div><h2>Top communautés</h2><span>Classement par score</span></div><button onClick={()=>setTab("communities")}>Voir tout <ChevronRight size={16}/></button></div><Table rows={filtered.slice(0,12)} onSelect={setDrawer}/></div>
  </div></section>
- :<section className="table-card full"><div className="card-head"><div><h2>Toutes les communautés</h2><span>{filtered.length} résultat(s)</span></div></div><Table rows={filtered.slice(0,300)} onSelect={setDrawer}/><p className="footnote">300 communautés maximum affichées à la fois — affinez avec les filtres pour voir les autres.</p></section>}
+ :<section className="table-card full"><div className="card-head"><div><h2>Toutes les communautés</h2><span>{filtered.length} résultat(s)</span></div></div><CommunitiesTable rows={filtered} onSelect={setDrawer}/></section>}
  </main>
  {toast&&<div className="toast" role="status">Score recalculé ✓</div>}
  {drawer&&<div className="drawer-backdrop" onClick={()=>setDrawer(null)}><aside className="drawer" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setDrawer(null)}><X/></button><span className="rank">RANG #{drawer.rank}</span><h2>{drawer.Communauté}</h2><div className="score-big">{drawer.score.toFixed(1)}<small>/100</small></div><div className={drawer.selected?"status":"status off"}>{drawer.selected?"Sélectionnée pour consultation":"Hors sélection"}</div><div className="details">{[["Pays",drawer.Pays],["Région",drawer.Région],["Commune",drawer.Commune],["Langue",drawer["Langue normalisée"]],["PRCC",`${drawer["Année Début PRCC"]} → ${drawer["Année Fin PRCC"]}`],["Bureau",drawer.Bureau],["Distance",`${Number(drawer["Distance bureau (km)"]).toFixed(1)} km`],["Population",drawer.POPULATION?Number(drawer.POPULATION).toLocaleString("fr-FR"):"Non disponible"],["Coordonnées",`${Number(drawer["Latitude référence"]).toFixed(5)}, ${Number(drawer["Longitude référence"]).toFixed(5)}`]].map(x=><div key={x[0]}><span>{withPrcc(x[0])}</span><b>{x[1]}</b></div>)}</div><h3>Détail du score</h3>{Object.entries({pop:"Population",dist:"Distance",dens:"Densité",recent:"Récence PRCC",duration:"Durée PRCC"}).map(([k,l])=><div className="score-row" key={k}><span>{withPrcc(l)}</span><b>{drawer.scores[k]===null?"—":`${drawer.scores[k]!.toFixed(1)} pts`}</b></div>)}<div className="coverage">Score calculé sur <b>{drawer.coverage}%</b> des critères disponibles pour cette communauté — les données manquantes ne pénalisent pas le classement.</div>
