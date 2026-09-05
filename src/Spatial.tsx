@@ -6,6 +6,10 @@ import type { Community } from "./App";
 import { LANG_COLORS } from "./palette";
 import { withPrcc, PRCC_TOOLTIP } from "./Prcc";
 
+// Préfixe des fichiers de public/data — vaut "/" en dev, "/HERS/" une fois publié sur GitHub Pages
+// (sous-dossier). Permet de garder les mêmes chemins quel que soit l'hébergement.
+const DATA_BASE = `${import.meta.env.BASE_URL}data/`;
+
 // ---- Contexte spatial (indice de potentiel) ----
 export function hashStr(s: string): number {
   let h = 2166136261;
@@ -347,13 +351,13 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
   const [corrections, setCorrections] = useState<Record<string, Correction>>(() => {
     try { return JSON.parse(localStorage.getItem(CORRECTIONS_KEY) || "{}"); } catch { return {}; }
   });
-  useEffect(() => { fetch("/data/roads_major.geojson").then((r) => r.json()).then(setRoadsData).catch(() => {}); }, []);
+  useEffect(() => { fetch(`${DATA_BASE}roads_major.geojson`).then((r) => r.json()).then(setRoadsData).catch(() => {}); }, []);
 
   // Comparaison avec les positions de « Tableau Public » (autre extraction de la base Tostan).
   const [tableauData, setTableauData] = useState<Record<string, { lat: number; lon: number }>>({});
   const [showTableauCompare, setShowTableauCompare] = useState(false);
   useEffect(() => {
-    fetch("/data/tableau_coords.json")
+    fetch(`${DATA_BASE}tableau_coords.json`)
       .then((r) => r.json())
       .then((arr: any[]) => {
         const map: Record<string, { lat: number; lon: number }> = {};
@@ -631,7 +635,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                 ))}
               </LayersControl>
               {showLandcover && (
-                <ImageOverlay url="/data/worldcover_senegal_gambie.png" bounds={LANDCOVER_BOUNDS} opacity={0.75} attribution="ESA WorldCover 2021" />
+                <ImageOverlay url={`${DATA_BASE}worldcover_senegal_gambie.png`} bounds={LANDCOVER_BOUNDS} opacity={0.75} attribution="ESA WorldCover 2021" />
               )}
               {showRoads && roadsData && <RoadsLayer data={roadsData} />}
               {markerLayer}
