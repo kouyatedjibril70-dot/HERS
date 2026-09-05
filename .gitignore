@@ -1,0 +1,13 @@
+# Dépendances
+node_modules/
+
+# Build
+dist/
+
+# Config locale (par machine, non partagée)
+.claude/settings.local.json
+*.local
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db

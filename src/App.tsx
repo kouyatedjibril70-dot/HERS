@@ -1,0 +1,119 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapContainer, TileLayer, LayersControl, CircleMarker, ZoomControl, useMap } from "react-leaflet";
+import { Search, SlidersHorizontal, Map as MapIcon, BarChart3, Users, Globe, X, ChevronRight, RotateCcw, MapPin } from "lucide-react";
+import communities from "./data/communities.json";
+// Identifiant stable, indépendant du rang/score (le rang change à chaque pondération — s'en servir
+// comme clé React forçait Leaflet à détruire/recréer ~1300 marqueurs à chaque glissement de curseur).
+const communitiesIndexed = (communities as any[]).map((r, i) => ({ ...r, _srcId: `row#${i}` }));
+import Spatial, { accessScore, agriScore, spatialScore, indiceSpatial, roadAccessScore, BASEMAPS } from "./Spatial";
+import { LANG_COLORS, ZONE_COLORS } from "./palette";
+import { withPrcc } from "./Prcc";
+
+export type Community = Record<string, any> & {score:number;rank:number;selected:boolean;coverage:number;scores:Record<string,number|null>};
+const reduceMotion=typeof window!=="undefined"&&!!window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// POPULATION est un champ partiellement manquant (valeur `null`) — Number(null)===0 est un nombre "fini",
+// donc un simple Number.isFinite(Number(...)) traiterait à tort "population inconnue" comme "population = 0".
+const hasPop=(r:any)=>r.POPULATION!==null&&r.POPULATION!==undefined&&r.POPULATION!==""&&Number.isFinite(Number(r.POPULATION));
+function CountUp({value,dur=650}:{value:number;dur?:number}){
+ const [n,setN]=useState(reduceMotion?value:0);const prev=useRef(reduceMotion?value:0);
+ useEffect(()=>{const from=prev.current,to=value;prev.current=value;if(from===to||reduceMotion){setN(to);return;}
+  let raf=0;const t0=performance.now();
+  const tick=(t:number)=>{const p=Math.min(1,(t-t0)/dur);setN(Math.round(from+(to-from)*(1-Math.pow(1-p,3))));if(p<1)raf=requestAnimationFrame(tick);};
+  raf=requestAnimationFrame(tick);return ()=>cancelAnimationFrame(raf);},[value,dur]);
+ return <>{n.toLocaleString("fr-FR")}</>;
+}
+// Rang percentile d'une valeur DANS UN TABLEAU DÉJÀ TRIÉ (recherche binaire).
+// scoreAll appelle ceci une fois par ligne et par critère (≈5 × 1373 fois) : trier le tableau
+// à chaque appel (ancienne version) coûtait O(n² log n) et faisait "caler" l'appli à chaque
+// glissement de curseur de pondération. Trier une fois par critère, puis chercher, est en O(n log n).
+function rankOf(sorted:number[],value:number,higher=true){
+  if(!sorted.length) return 0;
+  let lo=0,hi=sorted.length;
+  while(lo<hi){const mid=(lo+hi)>>1;if(sorted[mid]>=value)hi=mid;else lo=mid+1;}
+  const p=lo/(sorted.length-1||1);
+  return (higher?p:1-p)*100;
+}
+function scoreAll(rows:Record<string,any>[],w:{pop:number;dist:number;dens:number;recent:number;duration:number}){
+ return (["Sénégal","Gambie"] as const).flatMap(country=>{const base=rows.filter(r=>r.Pays===country);
+  const nums=(k:string)=>base.map(r=>Number(r[k])).filter(Number.isFinite).sort((a,b)=>a-b);
+  const pop=base.filter(hasPop).map(r=>Number(r.POPULATION)).sort((a,b)=>a-b),dist=nums("Distance bureau (km)"),dens=nums("Autres communautés dans 25 km"),fin=nums("Année Fin PRCC"),dur=base.map(r=>Number(r["Année Fin PRCC"])-Number(r["Année Début PRCC"])).filter(Number.isFinite).sort((a,b)=>a-b);
+  return base.map(r=>{const items=[
+    ["pop",hasPop(r)?rankOf(pop,Number(r.POPULATION),true):undefined,w.pop],
+    ["dist",Number.isFinite(Number(r["Distance bureau (km)"]))?rankOf(dist,Number(r["Distance bureau (km)"]),false):undefined,w.dist],
+    ["dens",Number.isFinite(Number(r["Autres communautés dans 25 km"]))?rankOf(dens,Number(r["Autres communautés dans 25 km"]),true):undefined,w.dens],
+    ["recent",Number.isFinite(Number(r["Année Fin PRCC"]))?rankOf(fin,Number(r["Année Fin PRCC"]),true):undefined,w.recent],
+    ["duration",Number.isFinite(Number(r["Année Fin PRCC"]))&&Number.isFinite(Number(r["Année Début PRCC"]))?rankOf(dur,Number(r["Année Fin PRCC"])-Number(r["Année Début PRCC"]),true):undefined,w.duration]
+  ] as [string,number|undefined,number][];
+  const avail=items.filter(x=>x[1]!==undefined),den=avail.reduce((s,x)=>s+x[2],0),totalW=items.reduce((s,x)=>s+x[2],0),score=den?avail.reduce((s,x)=>s+(x[1]!/100*x[2]),0)/den*100:0;
+  return {...r,score,coverage:totalW?Math.round(den/totalW*100):0,scores:Object.fromEntries(items.map(x=>[x[0],x[1]===undefined?null:x[1]/100*x[2]]))};
+ }).sort((a,b)=>b.score-a.score).map((r,i)=>({...r,rank:i+1} as Community));
+ }) as Community[];
+}
+function Stats({data,targets}:{data:Community[];targets:{Sénégal:number;Gambie:number}}){
+ const selected=data.filter(r=>r.selected).length;
+ const snN=data.filter(r=>r.Pays==="Sénégal").length,gmN=data.filter(r=>r.Pays==="Gambie").length;
+ const kpis:[string,string,number,string,number|null][]=[
+  ["base","Base",data.length,"communautés",null],
+  ["sn","Sénégal",targets.Sénégal,"consultations",snN?targets.Sénégal/snN*100:0],
+  ["gm","Gambie",targets.Gambie,"consultations",gmN?targets.Gambie/gmN*100:0],
+  ["sel","Sélection",selected,"retenues / "+data.length,data.length?selected/data.length*100:0],
+ ];
+ return <section className="stats">
+  {kpis.map(([k,label,val,sub,pct],i)=><div className={"stat stat--"+k} key={k} style={{animationDelay:`${i*60}ms`}}>
+   <span>{label}</span><strong><CountUp value={val}/></strong><small>{sub}</small>
+   {pct!==null&&<div className="kpi-prog"><i style={{width:`${Math.min(100,pct)}%`}}/></div>}
+  </div>)}
+ </section>;
+}
+function LangsPanel({data}:{data:Community[]}){
+ const selected=data.filter(r=>r.selected);
+ const langs=Object.entries(selected.reduce<Record<string,number>>((a,r)=>{const k=r["Langue normalisée"]||"—";a[k]=(a[k]||0)+1;return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,6);
+ const max=Math.max(1,...langs.map(x=>x[1]));
+ return <div className="chart-card langs-card">
+  <div className="card-title"><Globe size={16}/> Langues sélectionnées</div>
+  {langs.map(([k,v],i)=>{const c=LANG_COLORS[k]||"#94a3b8";const p=Math.round(v/(selected.length||1)*100);return <div className={"barrow"+(i===0?" barrow--top":"")} key={k}>
+   <span><i className="ldot" style={{background:c}}/>{k}</span>
+   <div><i style={{width:`${v/max*100}%`,background:`linear-gradient(90deg, ${c} 0%, color-mix(in srgb, ${c} 72%, #fff) 100%)`}}/></div>
+   <b><CountUp value={v}/> <em>{p}%</em></b>
+  </div>;})}
+ </div>;
+}
+function Recenter({center}:{center:[number,number]}){const map=useMap();useEffect(()=>{map.setView(center,6)},[map,center[0],center[1]]);return null}
+function Table({rows,onSelect}:{rows:Community[];onSelect:(r:Community)=>void}){return <div className="table-scroll"><table><thead><tr><th>Rang</th><th>Communauté</th><th>Pays</th><th>Région</th><th>Langue</th><th>{withPrcc("PRCC")}</th><th>Distance</th><th>Score</th><th>Statut</th></tr></thead><tbody>{rows.map(r=><tr key={r._id} onClick={()=>onSelect(r)}><td>#{r.rank}</td><td className="name">{r.Communauté}</td><td>{r.Pays}</td><td>{r.Région}</td><td>{r["Langue normalisée"]}</td><td>{r["Année Début PRCC"]}–{r["Année Fin PRCC"]}</td><td>{Number(r["Distance bureau (km)"]).toFixed(0)} km</td><td><b>{r.score.toFixed(1)}</b></td><td><span className={r.selected?"tag yes":"tag"}>{r.selected?"Sélectionnée":"Hors sélection"}</span></td></tr>)}</tbody></table></div>}
+export default function App(){
+ const [country,setCountry]=useState("Tous"),[region,setRegion]=useState("Toutes"),[lang,setLang]=useState("Toutes"),[bureau,setBureau]=useState("Tous"),[query,setQuery]=useState(""),[only,setOnly]=useState(false),[showSel,setShowSel]=useState(true),[showUnsel,setShowUnsel]=useState(true),[tab,setTab]=useState<"dashboard"|"communities"|"spatial">("dashboard"),[drawer,setDrawer]=useState<Community|null>(null);
+ const [targets,setTargets]=useState({Sénégal:642,Gambie:161}),[weights,setWeights]=useState({pop:0,dist:45,dens:20,recent:35,duration:0});
+ const [toast,setToast]=useState(false);const firstW=useRef(true);
+ useEffect(()=>{if(firstW.current){firstW.current=false;return;}setToast(true);const id=window.setTimeout(()=>setToast(false),1600);return ()=>window.clearTimeout(id);},[weights]);
+ useEffect(()=>{if(tab==="spatial"){setRegion("Toutes");setLang("Toutes");setBureau("Tous");}},[tab]);
+ const base=useMemo(()=>scoreAll(communitiesIndexed,weights),[weights]);
+ const data=useMemo(()=>base.map(r=>{const t=targets[r.Pays as "Sénégal"|"Gambie"];return {...r,selected:r.rank<=t,_id:r._srcId} as Community}),[base,targets]);
+ const regions=Array.from(new Set(data.filter(r=>country==="Tous"||r.Pays===country).map(r=>r.Région))).sort(),langs=Array.from(new Set(data.map(r=>r["Langue normalisée"]))).sort();
+ const filtered=data.filter(r=>(country==="Tous"||r.Pays===country)&&(region==="Toutes"||r.Région===region)&&(lang==="Toutes"||r["Langue normalisée"]===lang)&&(bureau==="Tous"||r.Bureau===bureau)&&(!only||r.selected)&&(!query||String(r.Communauté).toLowerCase().includes(query.toLowerCase())||String(r["code communaute"]).toLowerCase().includes(query.toLowerCase())));
+ const mapRows=filtered.filter(r=>r.selected?showSel:showUnsel);
+ const center:[number,number]=country==="Gambie"?[13.45,-15.2]:[14.2,-14.7];
+ return <div className="app"><div className="chrome"><div className="topbar"><div className="brand"><div className="logo">H</div><div><b>HERS — Sélection des communautés pilotes</b><span>Tableau de bord géospatial · Sénégal &amp; Gambie · {base.length} communautés · 5 bureaux</span></div></div><nav className="tabstrip"><button className={tab==="dashboard"?"active":""} onClick={()=>setTab("dashboard")}><BarChart3 size={18}/>Vue d'ensemble</button><button className={tab==="communities"?"active":""} onClick={()=>setTab("communities")}><Users size={18}/>Communautés</button><button className={tab==="spatial"?"active":""} onClick={()=>setTab("spatial")}><MapIcon size={18}/>Analyse spatiale</button></nav><div className="topbar-actions"><div className="consult-pill"><span>Consultations</span><strong><CountUp value={targets.Sénégal+targets.Gambie}/></strong><small>{targets.Sénégal} Sénégal · {targets.Gambie} Gambie</small></div></div></div></div>
+ <main>
+ {tab!=="spatial"&&<Stats data={data} targets={targets}/>}
+ <p className="section-eyebrow">{tab==="spatial"?"Filtres — affinent la carte analytique":"Filtres"}</p>
+ <div className="toolbar"><div className="search"><Search size={18}/><input placeholder="Rechercher une communauté…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
+ <div className="chip-group">{([["Tous","Tous",data.length,""],["Sénégal","Sénégal",data.filter(r=>r.Pays==="Sénégal").length,"sn"],["Gambie","Gambie",data.filter(r=>r.Pays==="Gambie").length,"gm"]] as [string,string,number,string][]).map(([v,lbl,n,mod])=><button key={v} className={"chip"+(mod?" chip--"+mod:"")+(country===v?" on":"")} onClick={()=>{setCountry(v);setRegion("Toutes")}}>{mod&&<i className="chip-dot"/>}{lbl}<b>{n}</b></button>)}</div>
+ {tab!=="spatial"&&<><select value={region} onChange={e=>setRegion(e.target.value)}><option>Toutes</option>{regions.map(r=><option key={r}>{r}</option>)}</select><select value={lang} onChange={e=>setLang(e.target.value)}><option>Toutes</option>{langs.map(l=><option key={l}>{l}</option>)}</select><select value={bureau} onChange={e=>setBureau(e.target.value)}><option value="Tous">Tous les bureaux</option>{["Kolda","Thiès","Tambacounda","Ourossogui","Basse"].map(b=><option key={b}>{b}</option>)}</select></>}
+ <button className="ghost reset-r" title="Réinitialiser les filtres" onClick={()=>{setCountry("Tous");setRegion("Toutes");setLang("Toutes");setBureau("Tous");setQuery("");setOnly(false);setShowSel(true);setShowUnsel(true)}}><RotateCcw size={16}/></button></div>
+ {tab==="spatial"?<Spatial all={data} rows={filtered} onSelect={setDrawer} onBureau={b=>{setBureau(b);setTab("communities");window.scrollTo({top:0,behavior:"smooth"})}}/>:tab==="dashboard"?<section className="grid2"><div className="map-card"><div className="card-head"><div><h2><MapPin size={15}/> Carte des communautés</h2><div className="head-meta"><span className="cnt-badge">{mapRows.length} visibles</span><span className="status-live"><i/>Données à jour</span></div></div></div><div className="map-wrap"><MapContainer center={center} zoom={6} scrollWheelZoom zoomControl={false}><ZoomControl position="topright"/><Recenter center={center}/><LayersControl position="topright">{BASEMAPS.map((b,i)=><LayersControl.BaseLayer key={b.name} name={b.name} checked={i===0}><TileLayer url={b.url} attribution={b.attribution} subdomains={b.subdomains??"abc"} maxNativeZoom={b.maxNativeZoom}/></LayersControl.BaseLayer>)}</LayersControl>{mapRows.filter(r=>Number.isFinite(Number(r["Latitude référence"]))).map(r=>{const zc=r.selected?ZONE_COLORS.selection:ZONE_COLORS.Sénégal;return <CircleMarker key={r._id} center={[Number(r["Latitude référence"]),Number(r["Longitude référence"])]} radius={r.selected?6:3.5} pathOptions={{color:zc,fillColor:zc,weight:r.selected?1.5:1,fillOpacity:r.selected?.9:.4,className:r.selected?"pmk":""}} eventHandlers={{click:()=>setDrawer(r)}}/>;})}</MapContainer><div className="map-legend"><button type="button" className={showSel?"":"off"} onClick={()=>setShowSel(v=>!v)}><i style={{background:ZONE_COLORS.selection}}/>Sélectionnée</button><button type="button" className={showUnsel?"":"off"} onClick={()=>setShowUnsel(v=>!v)}><i style={{background:ZONE_COLORS.Sénégal}}/>Non sélectionnée</button></div></div></div>
+ <div className="rail">
+ <div className="hint-panel"><MapPin size={20}/><div><b>Explorer la carte</b><span>Cliquez sur une communauté pour afficher son profil détaillé.</span></div></div>
+ <LangsPanel data={data}/>
+ <div className="side-card weight-card"><div className="card-title"><SlidersHorizontal size={17}/> Pondération du score</div><p className="muted">Testez différents scénarios. Le score est recalculé automatiquement.</p>{([["pop","Population","Nombre d'habitants de la communauté"],["dist","Distance bureau","Distance au bureau de coordination le plus proche"],["dens","Densité / proximité","Nombre d'autres communautés dans un rayon de 25 km"],["recent","Récence PRCC","Ancienneté de la fin du PRCC — plus c'est récent, mieux c'est"],["duration","Durée PRCC","Nombre d'années entre le début et la fin du PRCC"]] as [string,string,string][]).map(([k,l,tip])=>{const v=(weights as any)[k];const p=v/50*100;return <div className="weight" key={k}><span className="wlabel" data-tip={tip}>{withPrcc(l)}</span><input type="range" min={0} max={50} step={5} value={v} style={{background:`linear-gradient(90deg,#60a5fa 0 ${p}%,#e2e8f0 ${p}% 100%)`}} onChange={e=>setWeights({...weights,[k]:Number(e.target.value)})}/><b className="wval">{v}</b></div>;})}<div className="weight-total"><span>Total</span><b>{Object.values(weights).reduce((a,b)=>a+b,0)}</b><small>/ 100</small><div className="wprog"><i style={{width:`${Math.min(100,Object.values(weights).reduce((a,b)=>a+b,0))}%`}}/></div></div><button className="linkbtn" onClick={()=>setWeights({pop:0,dist:45,dens:20,recent:35,duration:0})}>Réinitialiser</button><div className="callout"><b>Langue</b><span>La langue n'influence pas le score, mais on vérifie qu'aucune langue n'est mise de côté par les autres critères — utile pour anticiper les besoins en animateurs par langue.</span></div><div className="callout warn"><b>Population Gambie</b><span>Non disponible dans la base actuelle.</span></div></div>
+ <div className="table-card"><div className="card-head"><div><h2>Top communautés</h2><span>Classement par score</span></div><button onClick={()=>setTab("communities")}>Voir tout <ChevronRight size={16}/></button></div><Table rows={filtered.slice(0,12)} onSelect={setDrawer}/></div>
+ </div></section>
+ :<section className="table-card full"><div className="card-head"><div><h2>Toutes les communautés</h2><span>{filtered.length} résultat(s)</span></div></div><Table rows={filtered.slice(0,300)} onSelect={setDrawer}/><p className="footnote">300 communautés maximum affichées à la fois — affinez avec les filtres pour voir les autres.</p></section>}
+ </main>
+ {toast&&<div className="toast" role="status">Score recalculé ✓</div>}
+ {drawer&&<div className="drawer-backdrop" onClick={()=>setDrawer(null)}><aside className="drawer" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setDrawer(null)}><X/></button><span className="rank">RANG #{drawer.rank}</span><h2>{drawer.Communauté}</h2><div className="score-big">{drawer.score.toFixed(1)}<small>/100</small></div><div className={drawer.selected?"status":"status off"}>{drawer.selected?"Sélectionnée pour consultation":"Hors sélection"}</div><div className="details">{[["Pays",drawer.Pays],["Région",drawer.Région],["Commune",drawer.Commune],["Langue",drawer["Langue normalisée"]],["PRCC",`${drawer["Année Début PRCC"]} → ${drawer["Année Fin PRCC"]}`],["Bureau",drawer.Bureau],["Distance",`${Number(drawer["Distance bureau (km)"]).toFixed(1)} km`],["Population",drawer.POPULATION?Number(drawer.POPULATION).toLocaleString("fr-FR"):"Non disponible"],["Coordonnées",`${Number(drawer["Latitude référence"]).toFixed(5)}, ${Number(drawer["Longitude référence"]).toFixed(5)}`],["Localisation",drawer["Méthode localisation"]]].map(x=><div key={x[0]}><span>{withPrcc(x[0])}</span><b>{x[1]}</b></div>)}</div><h3>Détail du score</h3>{Object.entries({pop:"Population",dist:"Distance",dens:"Densité",recent:"Récence PRCC",duration:"Durée PRCC"}).map(([k,l])=><div className="score-row" key={k}><span>{withPrcc(l)}</span><b>{drawer.scores[k]===null?"—":`${drawer.scores[k]!.toFixed(1)} pts`}</b></div>)}<div className="coverage">Score calculé sur <b>{drawer.coverage}%</b> des critères disponibles pour cette communauté — les données manquantes ne pénalisent pas le classement.</div>
+<div className="callout warn" style={{marginTop:12}}><b>Contexte spatial</b><span>Accessibilité et potentiel agricole : mesurés à partir de données satellite réelles · Accès marché et proximité eau : estimations provisoires, à confirmer sur le terrain.</span></div>
+<h3>Contexte spatial</h3>
+{([["Accessibilité",accessScore(drawer),"mesuré"],["Accès route (OSM)",roadAccessScore(drawer),"mesuré"],["Potentiel agricole (5 km)",agriScore(drawer),"mesuré"],["Accès marché",spatialScore(drawer,"marche"),"estimation"],["Proximité eau",spatialScore(drawer,"eau"),"estimation"]] as [string,number,string][]).map(([label,val,src])=><div className="score-row" key={label}><span>{label} <em style={{fontSize:11,opacity:.6}}>({src})</em></span><b>{val.toFixed(0)}/100</b></div>)}
+<div className="coverage">Indice de potentiel spatial : <b>{indiceSpatial(drawer).toFixed(0)}/100</b><br/><small>{indiceSpatial(drawer)>=60?"Potentiel élevé":indiceSpatial(drawer)>=40?"Potentiel moyen":"Potentiel limité"}</small></div></aside></div>}
+ </div>
+}
