@@ -602,6 +602,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
         <a href="#sp-carte">Carte &amp; distances</a>
         <a href="#sp-profil">Profil de la sélection</a>
         <a href="#sp-bureaux">Par bureau / région</a>
+        <a href="#sp-qualite">Points d'attention &amp; qualité</a>
       </nav>
       <div className="sp-facts" id="sp-synthese">
         <div className="stat"><span>Communautés analysées</span><strong>{all.length}</strong><small>Sénégal + Gambie</small></div>
@@ -632,56 +633,6 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
           </Analyse>
         );
       })()}
-
-      <div className="sp-two">
-        <div className="chart-card">
-          <div className="card-title"><CircleDot size={16} /> Points d'attention</div>
-          {(() => {
-            const nCritiques = att.filter((a) => a.c === "#d64550").length;
-            const nAttention = att.filter((a) => a.c === "#e8a13a").length;
-            // Tout ce qui n'est ni rouge ni orange compte comme "sans problème identifié" — y compris
-            // les entrées bleues informatives (ex. concentration par bureau). Somme = att.length TOUJOURS,
-            // sinon le diagnostic global et la liste détaillée ci-dessous peuvent se contredire silencieusement.
-            const nOk = att.length - nCritiques - nAttention;
-
-            let diagnostic: { emoji: string; titre: string; couleur: string };
-            if (nCritiques > 0) diagnostic = { emoji: "🔴", titre: "À vérifier avant validation", couleur: "#d64550" };
-            else if (nAttention > 0) diagnostic = { emoji: "🟠", titre: "À surveiller", couleur: "#e8a13a" };
-            else diagnostic = { emoji: "🟢", titre: "Situation maîtrisée", couleur: "#2f9e6f" };
-
-            return (
-              <div className="sp-diagnostic" style={{ borderColor: diagnostic.couleur }}>
-                <span className="sp-diagnostic-emoji">{diagnostic.emoji}</span>
-                <div>
-                  <b style={{ color: diagnostic.couleur }}>{diagnostic.titre}</b>
-                  <p>{nCritiques} point(s) critique(s), {nAttention} à surveiller, {nOk} sans problème identifié — détail ci-dessous.</p>
-                </div>
-              </div>
-            );
-          })()}
-          {att.map((a, i) => <div className="att" key={i}><i style={{ background: a.c }} /><span>{a.t}</span></div>)}
-        </div>
-
-        <div className="chart-card">
-          <div className="card-title"><Building2 size={16} /> Qualité des données</div>
-          {[
-            { l: "Population — Sénégal", n: snPop, d: snTot, c: "#2f9e6f" },
-            { l: "Population — Gambie", n: gmPop, d: gmTot, c: gmPop ? "#2f9e6f" : "#d64550" },
-            { l: "Coordonnées présentes", n: all.length, d: all.length, c: "#2f9e6f" },
-            { l: "Position jugée fiable", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée") || r["Méthode localisation"]?.startsWith("Position restaurée")).length, d: all.length, c: "#2f9e6f" },
-            { l: "Dont position au niveau du village précis (sous-ensemble le plus strict)", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée")).length, d: all.length, c: "#2f9e6f" },
-            { l: "PRCC terminé ≥ 2009 (critère officiel)", n: all.filter((r) => Number(r["Année Fin PRCC"]) >= 2009).length, d: all.length, c: "#2f9e6f" },
-            { l: "Code communauté", n: codeKnown, d: all.length, c: "#e8a13a" },
-          ].map((q) => (
-            <div className="q-row" key={q.l}>
-              <span>{withPrcc(q.l)}</span>
-              <div className="track"><i style={{ width: `${pct(q.n, q.d)}%`, background: q.c }} /></div>
-              <b>{q.n}/{q.d}</b>
-            </div>
-          ))}
-          <p className="footnote" style={{ padding: "6px 0 0" }}>Pour {centroid} communautés, la position a été estimée à partir de villages voisins déjà vérifiés — légèrement moins précise qu'une vérification individuelle.</p>
-        </div>
-      </div>
 
       <div className="grid" id="sp-carte">
         <div className="map-card" style={{ gridRow: "auto" }}>
@@ -1080,6 +1031,56 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
               </div>
             );
           })()}
+        </div>
+      </div>
+
+      <div className="sp-two" id="sp-qualite">
+        <div className="chart-card">
+          <div className="card-title"><CircleDot size={16} /> Points d'attention</div>
+          {(() => {
+            const nCritiques = att.filter((a) => a.c === "#d64550").length;
+            const nAttention = att.filter((a) => a.c === "#e8a13a").length;
+            // Tout ce qui n'est ni rouge ni orange compte comme "sans problème identifié" — y compris
+            // les entrées bleues informatives (ex. concentration par bureau). Somme = att.length TOUJOURS,
+            // sinon le diagnostic global et la liste détaillée ci-dessous peuvent se contredire silencieusement.
+            const nOk = att.length - nCritiques - nAttention;
+
+            let diagnostic: { emoji: string; titre: string; couleur: string };
+            if (nCritiques > 0) diagnostic = { emoji: "🔴", titre: "À vérifier avant validation", couleur: "#d64550" };
+            else if (nAttention > 0) diagnostic = { emoji: "🟠", titre: "À surveiller", couleur: "#e8a13a" };
+            else diagnostic = { emoji: "🟢", titre: "Situation maîtrisée", couleur: "#2f9e6f" };
+
+            return (
+              <div className="sp-diagnostic" style={{ borderColor: diagnostic.couleur }}>
+                <span className="sp-diagnostic-emoji">{diagnostic.emoji}</span>
+                <div>
+                  <b style={{ color: diagnostic.couleur }}>{diagnostic.titre}</b>
+                  <p>{nCritiques} point(s) critique(s), {nAttention} à surveiller, {nOk} sans problème identifié — détail ci-dessous.</p>
+                </div>
+              </div>
+            );
+          })()}
+          {att.map((a, i) => <div className="att" key={i}><i style={{ background: a.c }} /><span>{a.t}</span></div>)}
+        </div>
+
+        <div className="chart-card">
+          <div className="card-title"><Building2 size={16} /> Qualité des données</div>
+          {[
+            { l: "Population — Sénégal", n: snPop, d: snTot, c: "#2f9e6f" },
+            { l: "Population — Gambie", n: gmPop, d: gmTot, c: gmPop ? "#2f9e6f" : "#d64550" },
+            { l: "Coordonnées présentes", n: all.length, d: all.length, c: "#2f9e6f" },
+            { l: "Position jugée fiable", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée") || r["Méthode localisation"]?.startsWith("Position restaurée")).length, d: all.length, c: "#2f9e6f" },
+            { l: "Dont position au niveau du village précis (sous-ensemble le plus strict)", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée")).length, d: all.length, c: "#2f9e6f" },
+            { l: "PRCC terminé ≥ 2009 (critère officiel)", n: all.filter((r) => Number(r["Année Fin PRCC"]) >= 2009).length, d: all.length, c: "#2f9e6f" },
+            { l: "Code communauté", n: codeKnown, d: all.length, c: "#e8a13a" },
+          ].map((q) => (
+            <div className="q-row" key={q.l}>
+              <span>{withPrcc(q.l)}</span>
+              <div className="track"><i style={{ width: `${pct(q.n, q.d)}%`, background: q.c }} /></div>
+              <b>{q.n}/{q.d}</b>
+            </div>
+          ))}
+          <p className="footnote" style={{ padding: "6px 0 0" }}>Pour {centroid} communautés, la position a été estimée à partir de villages voisins déjà vérifiés — légèrement moins précise qu'une vérification individuelle.</p>
         </div>
       </div>
     </section>
