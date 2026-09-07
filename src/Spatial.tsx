@@ -612,27 +612,6 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
         <div className="stat"><span>Distance moyenne</span><strong>{gS.dist.toFixed(0)} km</strong><small>communautés retenues</small></div>
         <div className="stat"><span>Retenues &gt; 100 km</span><strong>{pct(sel.filter((r) => num(r, "Distance bureau (km)") > 100).length, sel.length).toFixed(0)} %</strong><small>éloignées d'un bureau</small></div>
       </div>
-      {(() => {
-        const tauxSelection = pct(sel.length, all.length);
-        const distMoy = gS.dist;
-        const partEloignee = pct(sel.filter((r) => num(r, "Distance bureau (km)") > 100).length, sel.length);
-
-        let lecture: string;
-        if (partEloignee < 10) {
-          lecture = `La sélection représente ${tauxSelection.toFixed(0)} % de la base analysée, avec une distance moyenne de ${distMoy.toFixed(0)} km au bureau. Seule une petite minorité (${partEloignee.toFixed(0)} %) se trouve à plus de 100 km — le profil global reste favorable à la supervision.`;
-        } else if (partEloignee < 25) {
-          lecture = `La sélection représente ${tauxSelection.toFixed(0)} % de la base analysée, avec une distance moyenne de ${distMoy.toFixed(0)} km au bureau. Une minorité notable (${partEloignee.toFixed(0)} %) se trouve à plus de 100 km et mérite une attention particulière lors de la planification de la supervision.`;
-        } else {
-          lecture = `La sélection représente ${tauxSelection.toFixed(0)} % de la base analysée, avec une distance moyenne de ${distMoy.toFixed(0)} km au bureau. Une part importante (${partEloignee.toFixed(0)} %) se trouve à plus de 100 km — la logistique de supervision devra être pensée en conséquence dès la planification.`;
-        }
-
-        return (
-          <Analyse title="Lecture générale">
-            <p>{lecture}</p>
-            <p className="sp-retenir">🎯 <b>Implication :</b> le profil de la sélection combine priorisation spatiale et faisabilité opérationnelle. Les arbitrages éventuels doivent porter en priorité sur les communautés éloignées (voir « Communautés éloignées ») et les zones de forte concentration (voir « Par bureau / région »).</p>
-          </Analyse>
-        );
-      })()}
 
       <div className="grid" id="sp-carte">
         <div className="map-card" style={{ gridRow: "auto" }}>
@@ -1033,6 +1012,28 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
           })()}
         </div>
       </div>
+
+      {(() => {
+        const tauxSelection = pct(sel.length, all.length);
+        const distMoy = gS.dist;
+        const partEloignee = pct(sel.filter((r) => num(r, "Distance bureau (km)") > 100).length, sel.length);
+
+        let lecture: string;
+        if (partEloignee < 10) {
+          lecture = `La sélection représente ${tauxSelection.toFixed(0)} % de la base analysée, avec une distance moyenne de ${distMoy.toFixed(0)} km au bureau. Seule une petite minorité (${partEloignee.toFixed(0)} %) se trouve à plus de 100 km — le profil global reste favorable à la supervision.`;
+        } else if (partEloignee < 25) {
+          lecture = `La sélection représente ${tauxSelection.toFixed(0)} % de la base analysée, avec une distance moyenne de ${distMoy.toFixed(0)} km au bureau. Une minorité notable (${partEloignee.toFixed(0)} %) se trouve à plus de 100 km et mérite une attention particulière lors de la planification de la supervision.`;
+        } else {
+          lecture = `La sélection représente ${tauxSelection.toFixed(0)} % de la base analysée, avec une distance moyenne de ${distMoy.toFixed(0)} km au bureau. Une part importante (${partEloignee.toFixed(0)} %) se trouve à plus de 100 km — la logistique de supervision devra être pensée en conséquence dès la planification.`;
+        }
+
+        return (
+          <Analyse title="Lecture générale">
+            <p>{lecture}</p>
+            <p className="sp-retenir">🎯 <b>Implication :</b> le profil de la sélection combine priorisation spatiale et faisabilité opérationnelle. Les arbitrages éventuels doivent porter en priorité sur les communautés éloignées (voir « Communautés éloignées ») et les zones de forte concentration (voir « Par bureau / région »).</p>
+          </Analyse>
+        );
+      })()}
 
       <div className="sp-two" id="sp-qualite">
         <div className="chart-card">
