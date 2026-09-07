@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { MapContainer, TileLayer, LayersControl, ImageOverlay, CircleMarker, Marker, Polyline, Circle, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Compass, Ruler, AlertTriangle, Building2, Languages, CircleDot, Move } from "lucide-react";
@@ -321,6 +321,21 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
   return null;
 }
 
+// Encadré d'analyse repliable : fermé par défaut pour alléger la page — l'interprétation
+// reste à un clic. Titre = résumé de ce qu'on trouve dedans.
+function Analyse({ title, children }: { title: ReactNode; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={"sp-analyse" + (open ? " open" : "")}>
+      <button type="button" className="sp-analyse-head" onClick={() => setOpen((v) => !v)}>
+        <span>💡 {title}</span>
+        <span className="sp-analyse-caret">{open ? "Masquer ▾" : "Voir l'analyse ▸"}</span>
+      </button>
+      {open && <div className="sp-analyse-body">{children}</div>}
+    </div>
+  );
+}
+
 export default function Spatial({ all, rows, onSelect, onBureau }: {
   all: Community[];
   rows: Community[];
@@ -585,10 +600,8 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
       <nav className="sp-nav">
         <a href="#sp-synthese">Synthèse</a>
         <a href="#sp-carte">Carte &amp; distances</a>
-        <a href="#sp-langues">Langues</a>
-        <a href="#sp-comparaison">Comparaison</a>
+        <a href="#sp-profil">Profil de la sélection</a>
         <a href="#sp-bureaux">Par bureau / région</a>
-        <a href="#sp-qualite">Points d'attention &amp; qualité</a>
       </nav>
       <div className="sp-facts" id="sp-synthese">
         <div className="stat"><span>Communautés analysées</span><strong>{all.length}</strong><small>Sénégal + Gambie</small></div>
@@ -613,13 +626,62 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
         }
 
         return (
-          <div className="sp-analyse">
-            <div className="sp-analyse-head">💡 Lecture générale</div>
+          <Analyse title="Lecture générale">
             <p>{lecture}</p>
             <p className="sp-retenir">🎯 <b>Implication :</b> le profil de la sélection combine priorisation spatiale et faisabilité opérationnelle. Les arbitrages éventuels doivent porter en priorité sur les communautés éloignées (voir « Communautés éloignées ») et les zones de forte concentration (voir « Par bureau / région »).</p>
-          </div>
+          </Analyse>
         );
       })()}
+
+      <div className="sp-two">
+        <div className="chart-card">
+          <div className="card-title"><CircleDot size={16} /> Points d'attention</div>
+          {(() => {
+            const nCritiques = att.filter((a) => a.c === "#d64550").length;
+            const nAttention = att.filter((a) => a.c === "#e8a13a").length;
+            // Tout ce qui n'est ni rouge ni orange compte comme "sans problème identifié" — y compris
+            // les entrées bleues informatives (ex. concentration par bureau). Somme = att.length TOUJOURS,
+            // sinon le diagnostic global et la liste détaillée ci-dessous peuvent se contredire silencieusement.
+            const nOk = att.length - nCritiques - nAttention;
+
+            let diagnostic: { emoji: string; titre: string; couleur: string };
+            if (nCritiques > 0) diagnostic = { emoji: "🔴", titre: "À vérifier avant validation", couleur: "#d64550" };
+            else if (nAttention > 0) diagnostic = { emoji: "🟠", titre: "À surveiller", couleur: "#e8a13a" };
+            else diagnostic = { emoji: "🟢", titre: "Situation maîtrisée", couleur: "#2f9e6f" };
+
+            return (
+              <div className="sp-diagnostic" style={{ borderColor: diagnostic.couleur }}>
+                <span className="sp-diagnostic-emoji">{diagnostic.emoji}</span>
+                <div>
+                  <b style={{ color: diagnostic.couleur }}>{diagnostic.titre}</b>
+                  <p>{nCritiques} point(s) critique(s), {nAttention} à surveiller, {nOk} sans problème identifié — détail ci-dessous.</p>
+                </div>
+              </div>
+            );
+          })()}
+          {att.map((a, i) => <div className="att" key={i}><i style={{ background: a.c }} /><span>{a.t}</span></div>)}
+        </div>
+
+        <div className="chart-card">
+          <div className="card-title"><Building2 size={16} /> Qualité des données</div>
+          {[
+            { l: "Population — Sénégal", n: snPop, d: snTot, c: "#2f9e6f" },
+            { l: "Population — Gambie", n: gmPop, d: gmTot, c: gmPop ? "#2f9e6f" : "#d64550" },
+            { l: "Coordonnées présentes", n: all.length, d: all.length, c: "#2f9e6f" },
+            { l: "Position jugée fiable", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée") || r["Méthode localisation"]?.startsWith("Position restaurée")).length, d: all.length, c: "#2f9e6f" },
+            { l: "Dont position au niveau du village précis (sous-ensemble le plus strict)", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée")).length, d: all.length, c: "#2f9e6f" },
+            { l: "PRCC terminé ≥ 2009 (critère officiel)", n: all.filter((r) => Number(r["Année Fin PRCC"]) >= 2009).length, d: all.length, c: "#2f9e6f" },
+            { l: "Code communauté", n: codeKnown, d: all.length, c: "#e8a13a" },
+          ].map((q) => (
+            <div className="q-row" key={q.l}>
+              <span>{withPrcc(q.l)}</span>
+              <div className="track"><i style={{ width: `${pct(q.n, q.d)}%`, background: q.c }} /></div>
+              <b>{q.n}/{q.d}</b>
+            </div>
+          ))}
+          <p className="footnote" style={{ padding: "6px 0 0" }}>Pour {centroid} communautés, la position a été estimée à partir de villages voisins déjà vérifiés — légèrement moins précise qu'une vérification individuelle.</p>
+        </div>
+      </div>
 
       <div className="grid" id="sp-carte">
         <div className="map-card" style={{ gridRow: "auto" }}>
@@ -691,12 +753,11 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
               const analyse = analyseCarte(mode, mapRows);
               if (!analyse) return null;
               return (
-                <div className="sp-analyse">
-                  <div className="sp-analyse-head">💡 Analyse — mode « {segs.find(([m]) => m === mode)?.[1]} »</div>
+                <Analyse title={<>Analyse — mode « {segs.find(([m]) => m === mode)?.[1]} »</>}>
                   <p><b>Observation :</b> {analyse.observation}</p>
                   <p><b>Ce que ça veut dire :</b> {analyse.lecture}</p>
                   <p className="sp-retenir">🎯 <b>À retenir :</b> {analyse.retenir}</p>
-                </div>
+                </Analyse>
               );
             })()}
             {/* Analyses en 4 temps des deux outils du panneau latéral — affichées sous la carte plutôt que sur le côté. */}
@@ -725,13 +786,12 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
               }
 
               return (
-                <div className="sp-analyse">
-                  <div className="sp-analyse-head">💡 Analyse du périmètre — {spBureau}, {radius} km</div>
+                <Analyse title={<>Analyse du périmètre — {spBureau}, {radius} km</>}>
                   <p><b>Observation :</b> dans un rayon de {radius} km autour de {spBureau}, {inRadius.length} communautés sont rattachées, dont {retenues.length} retenues ({tauxLocal.toFixed(0)} %) et {horsSel.length} non retenues.</p>
                   <p><b>Ce que ça veut dire :</b> {interpretation}</p>
                   {pourquoi && <p><b>Différence entre les deux groupes :</b> {pourquoi}</p>}
                   <p className="sp-retenir">🎯 <b>À retenir :</b> pour savoir si une région entière est sur- ou sous-représentée dans la sélection, consultez plutôt l'onglet « Par bureau / région », qui compare des zones administratives complètes plutôt qu'un rayon choisi librement ici.</p>
-                </div>
+                </Analyse>
               );
             })()}
             {farTouched && far.length > 0 && (() => {
@@ -758,8 +818,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
               }
 
               return (
-                <div className="sp-analyse">
-                  <div className="sp-analyse-head">💡 Analyse — communautés éloignées (&gt; {farThresh} km)</div>
+                <Analyse title={<>Analyse — communautés éloignées (&gt; {farThresh} km)</>}>
                   <p className="muted" style={{ margin: "0 0 8px", fontSize: 12 }}>Porte sur les 803 communautés retenues, tous bureaux et pays confondus — indépendant du bureau choisi ci-dessus dans « Distance autour d'un bureau ».</p>
                   <p><b>Observation :</b> {far.length} communautés retenues ({partSel.toFixed(1)} % de la sélection) se situent à plus de {farThresh} km de leur bureau de coordination.</p>
                   <p><b>Ce que ça veut dire :</b> {partSel < 15
@@ -767,7 +826,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                     : "cette proportion est notable — une part significative de la sélection sera plus coûteuse à superviser sur le plan logistique."}</p>
                   <p><b>Pourquoi ces communautés sont-elles quand même retenues :</b> {pourquoi}</p>
                   <p className="sp-retenir">🎯 <b>À retenir pour l'équipe terrain :</b> ces communautés ne doivent pas nécessairement être écartées, mais prévoir des déplacements et une supervision adaptés à leur éloignement.</p>
-                </div>
+                </Analyse>
               );
             })()}
           </div>
@@ -848,7 +907,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
         </div>
       </div>
 
-      <div className="sp-two" id="sp-langues">
+      <div className="sp-two" id="sp-profil">
         <div className="chart-card">
           <div className="card-title"><Ruler size={16} /> Distance des communautés retenues aux bureaux</div>
           {distBuckets.map((b) => (
@@ -878,7 +937,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
         </div>
       </div>
 
-      <div className="table-card" id="sp-comparaison">
+      <div className="table-card">
         <div className="card-head"><div><h2>Sélectionnées vs hors sélection</h2><span>Le classement produit-il un profil distinct&nbsp;?</span></div></div>
         <div className="table-scroll">
           <table>
@@ -914,12 +973,13 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
           const popPct = pct(snPop, snTot);
 
           return (
-            <div className="sp-analyse" style={{ margin: "0 16px 16px" }}>
-              <div className="sp-analyse-head">💡 Analyse comparative</div>
-              <p><b>Observation :</b> les communautés sélectionnées ont un score moyen de {gS.score.toFixed(1)}, contre {gN.score.toFixed(1)} pour les non sélectionnées — un écart de {ecartScore.toFixed(1)} points.</p>
-              <p><b>Ce que ça veut dire :</b> {quiExplique}{mentionNegligeable}</p>
-              <p><b>Implication :</b> le classement produit bien une sélection différenciée, cohérente avec les critères retenus (distance, concentration locale, récence du PRCC) — ce n'est pas un tirage proche du hasard.</p>
-              <p className="sp-retenir">🎯 <b>À retenir :</b> la ligne « Population moyenne » de ce tableau ne concerne que le Sénégal et seulement les communautés où cette donnée existe ({popPct.toFixed(0)} % de la base sénégalaise) — elle ne doit pas être lue comme un indicateur de poids réel dans le score, puisque la population ne compte actuellement pour rien dans le calcul du score (réglage modifiable dans l'onglet Vue d'ensemble).</p>
+            <div style={{ margin: "0 16px 16px" }}>
+              <Analyse title="Analyse comparative">
+                <p><b>Observation :</b> les communautés sélectionnées ont un score moyen de {gS.score.toFixed(1)}, contre {gN.score.toFixed(1)} pour les non sélectionnées — un écart de {ecartScore.toFixed(1)} points.</p>
+                <p><b>Ce que ça veut dire :</b> {quiExplique}{mentionNegligeable}</p>
+                <p><b>Implication :</b> le classement produit bien une sélection différenciée, cohérente avec les critères retenus (distance, concentration locale, récence du PRCC) — ce n'est pas un tirage proche du hasard.</p>
+                <p className="sp-retenir">🎯 <b>À retenir :</b> la ligne « Population moyenne » de ce tableau ne concerne que le Sénégal et seulement les communautés où cette donnée existe ({popPct.toFixed(0)} % de la base sénégalaise) — elle ne doit pas être lue comme un indicateur de poids réel dans le score, puisque la population ne compte actuellement pour rien dans le calcul du score (réglage modifiable dans l'onglet Vue d'ensemble).</p>
+              </Analyse>
             </div>
           );
         })()}
@@ -967,12 +1027,13 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             }
 
             return (
-              <div className="sp-analyse" style={{ margin: "0 16px 16px" }}>
-                <div className="sp-analyse-head">💡 Analyse territoriale</div>
-                <p><b>Observation :</b> la zone de {plusEcarte.b} représente {pBase} % des communautés éligibles au {plusEcarte.pays}, et {pSel} % des communautés retenues au {plusEcarte.pays}.</p>
-                <p><b>Ce que ça veut dire :</b> {lecture}</p>
-                <p><b>Implication :</b> obtenir plus (ou moins) de places que son poids de départ n'est pas nécessairement un problème — cela peut refléter une réalité de terrain (communautés vraiment plus proches, plus récentes ou plus concentrées dans cette zone). Mais un écart important mérite d'être confirmé comme un choix assumé plutôt qu'un effet de bord du score.</p>
-                <p className="sp-retenir">🎯 <b>À retenir :</b> cette comparaison se fait toujours entre communautés d'un même pays (jamais Sénégal contre Gambie directement) — c'est la bonne façon de repérer un déséquilibre, contrairement à un simple taux de sélection local qui varie surtout avec la distance choisie sur la carte.</p>
+              <div style={{ margin: "0 16px 16px" }}>
+                <Analyse title="Analyse territoriale">
+                  <p><b>Observation :</b> la zone de {plusEcarte.b} représente {pBase} % des communautés éligibles au {plusEcarte.pays}, et {pSel} % des communautés retenues au {plusEcarte.pays}.</p>
+                  <p><b>Ce que ça veut dire :</b> {lecture}</p>
+                  <p><b>Implication :</b> obtenir plus (ou moins) de places que son poids de départ n'est pas nécessairement un problème — cela peut refléter une réalité de terrain (communautés vraiment plus proches, plus récentes ou plus concentrées dans cette zone). Mais un écart important mérite d'être confirmé comme un choix assumé plutôt qu'un effet de bord du score.</p>
+                  <p className="sp-retenir">🎯 <b>À retenir :</b> cette comparaison se fait toujours entre communautés d'un même pays (jamais Sénégal contre Gambie directement) — c'est la bonne façon de repérer un déséquilibre, contrairement à un simple taux de sélection local qui varie surtout avec la distance choisie sur la carte.</p>
+                </Analyse>
               </div>
             );
           })()}
@@ -1006,68 +1067,19 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
 
             const rBase = plusEcartee.partBase.toFixed(0), rSel = plusEcartee.partSelection.toFixed(0), rEcart = Math.abs(plusEcartee.ecart).toFixed(0);
             return (
-              <div className="sp-analyse" style={{ margin: "0 16px 16px" }}>
-                <div className="sp-analyse-head">💡 Analyse régionale</div>
-                <p><b>Observation :</b> la région {plusEcartee.rg} représente {rBase} % des communautés éligibles au {plusEcartee.pays}, et {rSel} % des communautés retenues au {plusEcartee.pays}.</p>
-                <p><b>Ce que ça veut dire :</b> {Math.abs(plusEcartee.ecart) < 5
+              <div style={{ margin: "0 16px 16px" }}>
+                <Analyse title="Analyse régionale">
+                  <p><b>Observation :</b> la région {plusEcartee.rg} représente {rBase} % des communautés éligibles au {plusEcartee.pays}, et {rSel} % des communautés retenues au {plusEcartee.pays}.</p>
+                  <p><b>Ce que ça veut dire :</b> {Math.abs(plusEcartee.ecart) < 5
                   ? `Sa part reste à peu près la même entre les communautés éligibles (${rBase} %) et celles retenues (${rSel} %) — pas de déséquilibre notable.`
                   : plusEcartee.ecart > 0
                     ? `Sur 100 communautés éligibles au ${plusEcartee.pays}, ${rBase} viennent de cette région ; sur 100 retenues, ${rSel} en viennent — ${rEcart} points de plus qu'attendu.`
                     : `Sur 100 communautés éligibles au ${plusEcartee.pays}, ${rBase} viennent de cette région ; sur 100 retenues, seulement ${rSel} en viennent — ${rEcart} points de moins qu'attendu.`}</p>
-                <p className="sp-retenir">🎯 <b>À retenir :</b> les régions avec moins de 10 communautés dans la base ne sont pas incluses dans cette comparaison — un écart sur un petit effectif n'est pas significatif. La comparaison se fait aussi au sein du même pays, jamais entre Sénégal et Gambie directement.</p>
+                  <p className="sp-retenir">🎯 <b>À retenir :</b> les régions avec moins de 10 communautés dans la base ne sont pas incluses dans cette comparaison — un écart sur un petit effectif n'est pas significatif. La comparaison se fait aussi au sein du même pays, jamais entre Sénégal et Gambie directement.</p>
+                </Analyse>
               </div>
             );
           })()}
-        </div>
-      </div>
-
-      <div className="sp-two" id="sp-qualite">
-        <div className="chart-card">
-          <div className="card-title"><CircleDot size={16} /> Points d'attention</div>
-          {(() => {
-            const nCritiques = att.filter((a) => a.c === "#d64550").length;
-            const nAttention = att.filter((a) => a.c === "#e8a13a").length;
-            // Tout ce qui n'est ni rouge ni orange compte comme "sans problème identifié" — y compris
-            // les entrées bleues informatives (ex. concentration par bureau). Somme = att.length TOUJOURS,
-            // sinon le diagnostic global et la liste détaillée ci-dessous peuvent se contredire silencieusement.
-            const nOk = att.length - nCritiques - nAttention;
-
-            let diagnostic: { emoji: string; titre: string; couleur: string };
-            if (nCritiques > 0) diagnostic = { emoji: "🔴", titre: "À vérifier avant validation", couleur: "#d64550" };
-            else if (nAttention > 0) diagnostic = { emoji: "🟠", titre: "À surveiller", couleur: "#e8a13a" };
-            else diagnostic = { emoji: "🟢", titre: "Situation maîtrisée", couleur: "#2f9e6f" };
-
-            return (
-              <div className="sp-diagnostic" style={{ borderColor: diagnostic.couleur }}>
-                <span className="sp-diagnostic-emoji">{diagnostic.emoji}</span>
-                <div>
-                  <b style={{ color: diagnostic.couleur }}>{diagnostic.titre}</b>
-                  <p>{nCritiques} point(s) critique(s), {nAttention} à surveiller, {nOk} sans problème identifié — détail ci-dessous.</p>
-                </div>
-              </div>
-            );
-          })()}
-          {att.map((a, i) => <div className="att" key={i}><i style={{ background: a.c }} /><span>{a.t}</span></div>)}
-        </div>
-
-        <div className="chart-card">
-          <div className="card-title"><Building2 size={16} /> Qualité des données</div>
-          {[
-            { l: "Population — Sénégal", n: snPop, d: snTot, c: "#2f9e6f" },
-            { l: "Population — Gambie", n: gmPop, d: gmTot, c: gmPop ? "#2f9e6f" : "#d64550" },
-            { l: "Coordonnées présentes", n: all.length, d: all.length, c: "#2f9e6f" },
-            { l: "Position jugée fiable", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée") || r["Méthode localisation"]?.startsWith("Position restaurée")).length, d: all.length, c: "#2f9e6f" },
-            { l: "Dont position au niveau du village précis (sous-ensemble le plus strict)", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée")).length, d: all.length, c: "#2f9e6f" },
-            { l: "PRCC terminé ≥ 2009 (critère officiel)", n: all.filter((r) => Number(r["Année Fin PRCC"]) >= 2009).length, d: all.length, c: "#2f9e6f" },
-            { l: "Code communauté", n: codeKnown, d: all.length, c: "#e8a13a" },
-          ].map((q) => (
-            <div className="q-row" key={q.l}>
-              <span>{withPrcc(q.l)}</span>
-              <div className="track"><i style={{ width: `${pct(q.n, q.d)}%`, background: q.c }} /></div>
-              <b>{q.n}/{q.d}</b>
-            </div>
-          ))}
-          <p className="footnote" style={{ padding: "6px 0 0" }}>Pour {centroid} communautés, la position a été estimée à partir de villages voisins déjà vérifiés — légèrement moins précise qu'une vérification individuelle.</p>
         </div>
       </div>
     </section>
