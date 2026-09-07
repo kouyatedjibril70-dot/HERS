@@ -215,24 +215,25 @@ main>section+section{margin-top:24px}
 @media(max-width:1100px){.grid2{grid-template-columns:1fr}.grid2 .map-wrap{height:440px;min-height:0}}
 
 /* --- Tableau "Communautés" : en-têtes triables + filtres par colonne (style bandeau sombre) --- */
-.ctable-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:14px;background:#fff}
-.ctable{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+.ctable-wrap{max-width:100%;overflow-x:auto;border:1px solid #e2e8f0;border-radius:14px;background:#fff}
+.ctable{width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;table-layout:fixed}
 .ctable thead{position:sticky;top:0;z-index:3}
-.ctable thead tr:first-child th{background:linear-gradient(180deg,#1e293b,#0f172a);color:#fff;text-transform:uppercase;font-size:10px;letter-spacing:.05em;font-weight:700;padding:11px 12px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none}
+.ctable thead tr:first-child th{background:linear-gradient(180deg,#1e293b,#0f172a);color:#fff;text-transform:uppercase;font-size:9px;letter-spacing:.03em;font-weight:700;padding:9px 8px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none}
 .ctable thead tr:first-child th:hover{background:linear-gradient(180deg,#293548,#16233b)}
-.ctable thead tr:first-child th.sorted{color:#fff}
-.ctable .sort-ic{opacity:.4;margin-left:6px;vertical-align:-2px}
+.ctable .sort-ic{opacity:.4;margin-left:4px;vertical-align:-2px;flex:none}
 .ctable .sort-ic.on{opacity:1;color:#7dd3fc}
-.ctable thead tr.filters th{background:#f8fafc;padding:6px 8px;border-bottom:1px solid #e2e8f0}
-.ctable thead tr.filters input,.ctable thead tr.filters select{width:100%;min-width:90px;font-size:11px;padding:4px 6px;border:1px solid #d7dee7;border-radius:6px;background:#fff;color:#0f172a;font-family:inherit;outline:none}
+.ctable thead tr.filters th{background:#f8fafc;padding:5px 6px;border-bottom:1px solid #e2e8f0}
+.ctable thead tr.filters input,.ctable thead tr.filters select{width:100%;min-width:0;box-sizing:border-box;font-size:10.5px;padding:3px 5px;border:1px solid #d7dee7;border-radius:6px;background:#fff;color:#0f172a;font-family:inherit;outline:none}
 .ctable thead tr.filters input:focus,.ctable thead tr.filters select:focus{border-color:#3b82f6}
-.ctable tbody td{padding:10px 12px;border-bottom:1px solid #eef1f5;color:#334155;white-space:nowrap;vertical-align:middle}
+.ctable tbody td{padding:8px;border-bottom:1px solid #eef1f5;color:#334155;vertical-align:middle;overflow-wrap:anywhere}
 .ctable tbody tr{cursor:pointer;transition:background .1s ease}
 .ctable tbody tr:hover{background:#f1f6fd}
 .ctable tbody tr:last-child td{border-bottom:0}
 .ctable td.c-name{font-weight:700;color:#0f172a}
-.ctable .c-pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;white-space:nowrap}
-.ctable .c-score{display:flex;align-items:center;gap:8px;min-width:120px}
+/* colonnes courtes (Fin PRCC, Distance, Score, Statut) : pas de retour à la ligne */
+.ctable th:nth-child(n+7),.ctable td:nth-child(n+7){white-space:nowrap}
+.ctable .c-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}
+.ctable .c-score{display:flex;align-items:center;gap:6px;min-width:74px}
 .ctable .c-score .bar{flex:1;height:6px;border-radius:999px;background:#e2e8f0;overflow:hidden}
 .ctable .c-score .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#16a34a)}
-.ctable .c-score b{font-variant-numeric:tabular-nums;color:#0f172a;min-width:22px;text-align:right}
+.ctable .c-score b{font-variant-numeric:tabular-nums;color:#0f172a;min-width:20px;text-align:right}

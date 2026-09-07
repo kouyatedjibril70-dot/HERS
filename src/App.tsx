@@ -82,7 +82,7 @@ function Recenter({center}:{center:[number,number]}){const map=useMap();useEffec
 function Table({rows,onSelect}:{rows:Community[];onSelect:(r:Community)=>void}){return <div className="table-scroll"><table><thead><tr><th>Rang</th><th>Communauté</th><th>Pays</th><th>Région</th><th>Langue</th><th>{withPrcc("PRCC")}</th><th>Distance</th><th>Score</th><th>Statut</th></tr></thead><tbody>{rows.map(r=><tr key={r._id} onClick={()=>onSelect(r)}><td>#{r.rank}</td><td className="name">{r.Communauté}</td><td>{r.Pays}</td><td>{r.Région}</td><td>{r["Langue normalisée"]}</td><td>{r["Année Début PRCC"]}–{r["Année Fin PRCC"]}</td><td>{Number(r["Distance bureau (km)"]).toFixed(0)} km</td><td><b>{r.score.toFixed(1)}</b></td><td><span className={r.selected?"tag yes":"tag"}>{r.selected?"Sélectionnée":"Hors sélection"}</span></td></tr>)}</tbody></table></div>}
 
 // Tableau complet de la page « Communautés » : en-têtes triables + ligne de filtres par colonne.
-type CCol = { key: string; label: string; kind: "text" | "num" | "pill-pays" | "prcc" | "score" | "pill-statut"; filter: "text" | "select" | null; get: (r: Community) => string | number; options?: string[] };
+type CCol = { key: string; label: string; kind: "text" | "num" | "pill-pays" | "prcc" | "score" | "pill-statut"; filter: "text" | "select" | null; get: (r: Community) => string | number; options?: string[]; w: string };
 function CommunitiesTable({ rows, onSelect }: { rows: Community[]; onSelect: (r: Community) => void }) {
   const [sortKey, setSortKey] = useState("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -90,16 +90,16 @@ function CommunitiesTable({ rows, onSelect }: { rows: Community[]; onSelect: (r:
   const langOptions = useMemo(() => Array.from(new Set(rows.map((r) => r["Langue normalisée"]).filter(Boolean) as string[])).sort(), [rows]);
 
   const cols: CCol[] = [
-    { key: "Communauté", label: "Communauté", kind: "text", filter: "text", get: (r) => r.Communauté ?? "" },
-    { key: "Pays", label: "Pays", kind: "pill-pays", filter: "select", options: ["Sénégal", "Gambie"], get: (r) => r.Pays ?? "" },
-    { key: "Région", label: "Région", kind: "text", filter: "text", get: (r) => r.Région ?? "" },
-    { key: "Niveau2", label: "Département", kind: "text", filter: "text", get: (r) => r.Niveau2 ?? "" },
-    { key: "Commune", label: "Commune", kind: "text", filter: "text", get: (r) => r.Commune ?? "" },
-    { key: "Langue normalisée", label: "Langue", kind: "text", filter: "select", options: langOptions, get: (r) => r["Langue normalisée"] ?? "" },
-    { key: "Année Fin PRCC", label: "Fin PRCC", kind: "prcc", filter: null, get: (r) => Number(r["Année Fin PRCC"]) || 0 },
-    { key: "Distance bureau (km)", label: "Distance", kind: "num", filter: null, get: (r) => Number(r["Distance bureau (km)"]) || 0 },
-    { key: "score", label: "Score", kind: "score", filter: null, get: (r) => r.score },
-    { key: "selected", label: "Statut", kind: "pill-statut", filter: "select", options: ["Sélectionnée", "Hors sélection"], get: (r) => (r.selected ? "Sélectionnée" : "Hors sélection") },
+    { key: "Communauté", label: "Communauté", kind: "text", filter: "text", w: "16%", get: (r) => r.Communauté ?? "" },
+    { key: "Pays", label: "Pays", kind: "pill-pays", filter: "select", options: ["Sénégal", "Gambie"], w: "8%", get: (r) => r.Pays ?? "" },
+    { key: "Région", label: "Région", kind: "text", filter: "text", w: "11%", get: (r) => r.Région ?? "" },
+    { key: "Niveau2", label: "Département", kind: "text", filter: "text", w: "12%", get: (r) => r.Niveau2 ?? "" },
+    { key: "Commune", label: "Commune", kind: "text", filter: "text", w: "11%", get: (r) => r.Commune ?? "" },
+    { key: "Langue normalisée", label: "Langue", kind: "text", filter: "select", options: langOptions, w: "9%", get: (r) => r["Langue normalisée"] ?? "" },
+    { key: "Année Fin PRCC", label: "Fin PRCC", kind: "prcc", filter: null, w: "9%", get: (r) => Number(r["Année Fin PRCC"]) || 0 },
+    { key: "Distance bureau (km)", label: "Distance", kind: "num", filter: null, w: "7%", get: (r) => Number(r["Distance bureau (km)"]) || 0 },
+    { key: "score", label: "Score", kind: "score", filter: null, w: "9%", get: (r) => r.score },
+    { key: "selected", label: "Statut", kind: "pill-statut", filter: "select", options: ["Sélectionnée", "Hors sélection"], w: "8%", get: (r) => (r.selected ? "Sélectionnée" : "Hors sélection") },
   ];
 
   const view = useMemo(() => {
@@ -131,6 +131,7 @@ function CommunitiesTable({ rows, onSelect }: { rows: Community[]; onSelect: (r:
   return (
     <div className="ctable-wrap">
       <table className="ctable">
+        <colgroup>{cols.map((c) => <col key={c.key} style={{ width: c.w }} />)}</colgroup>
         <thead>
           <tr>
             {cols.map((c) => (
