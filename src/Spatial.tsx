@@ -10,22 +10,20 @@ import { withPrcc, PRCC_TOOLTIP } from "./Prcc";
 // (sous-dossier). Permet de garder les mêmes chemins quel que soit l'hébergement.
 const DATA_BASE = `${import.meta.env.BASE_URL}data/`;
 
-// ---- Contexte spatial (indice de potentiel) ----
-export function hashStr(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return (h >>> 0) / 4294967295;
-}
-export function pseudo(seed: string, salt: string) { return hashStr(seed + "|" + salt); }
+// ---- Contexte spatial (indice de potentiel) — 100 % données mesurées ----
 
 // Potentiel agricole : donnée RÉELLE (ESA WorldCover, % terres cultivées dans un rayon de 5 km)
 export function agriScore(r: Community): number {
   const v = Number(r["pct_cultures_5km"]);
   return Number.isFinite(v) ? v : 50; // 50 = neutre si absent pour une communauté
 }
-// Marché / eau : SIMULÉS pour l'instant, en attente de données OSM
+// Marché / eau : distances OSM RÉELLES (dist_marche_osm_km / dist_eau_osm_km), converties en note sur 100.
+// 0 km -> 100 ; au-delà du seuil (25 km pour le marché, 30 km pour l'eau) -> 0.
 export function spatialScore(r: Community, key: "marche" | "eau"): number {
-  return 15 + pseudo(String(r._id ?? r.Communauté), key) * 80;
+  const d = Number(r[key === "marche" ? "dist_marche_osm_km" : "dist_eau_osm_km"]);
+  if (!Number.isFinite(d)) return 50;
+  const seuil = key === "marche" ? 25 : 30;
+  return Math.max(0, 100 - (d / seuil) * 100);
 }
 export function accessScore(r: Community): number {
   const d = Number(r["Distance bureau (km)"]);

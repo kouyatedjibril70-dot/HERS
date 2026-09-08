@@ -77,11 +77,15 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           forêt, bâti, eau…). La valeur affichée est la <b>proportion de ce cercle classée en « cultures »</b>.
           Plus le chiffre est élevé, plus il y a d'activité agricole autour du village.
         </p>
-        <h3>Accès route</h3>
+        <h3>Accès route, accès marché, proximité eau</h3>
         <p>
-          On prend le réseau routier d'OpenStreetMap (cartographie communautaire ouverte) et on mesure la
-          <b> distance à vol d'oiseau jusqu'à la route la plus proche</b>. Cette distance est convertie en note
-          sur 100 : 0 km = 100 (le village est sur la route), 5 km ou plus = 0.
+          À partir d'OpenStreetMap (cartographie communautaire ouverte), on mesure pour chaque communauté la
+          <b> distance à vol d'oiseau jusqu'à la route, au marché et au point d'eau les plus proches</b>. Chaque
+          distance est convertie en note sur 100 : 0 km = 100, et au-delà d'un seuil = 0 (5 km pour la route,
+          25 km pour le marché, 30 km pour l'eau).
+        </p>
+        <p>
+          Tous ces indicateurs sont des <b>mesures réelles</b> — aucune valeur inventée ou provisoire.
         </p>
 
         <h2>6. Ce qu'il faut garder en tête</h2>
