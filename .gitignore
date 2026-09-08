@@ -11,3 +11,6 @@ dist/
 # OS / éditeurs
 .DS_Store
 Thumbs.db
+
+# Fichiers sources OSM (staging, non nécessaires à l'app)
+import/

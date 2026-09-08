@@ -77,16 +77,23 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           forêt, bâti, eau…). La valeur affichée est la <b>proportion de ce cercle classée en « cultures »</b>.
           Plus le chiffre est élevé, plus il y a d'activité agricole autour du village.
         </p>
-        <h3>Accès route</h3>
+        <h3>Accès route (note sur 100)</h3>
         <p>
-          À partir d'OpenStreetMap (cartographie communautaire ouverte), on mesure pour chaque communauté la
-          <b> distance à vol d'oiseau jusqu'à la route la plus proche</b>. Cette distance est convertie en note
-          sur 100 : 0 km = 100 (le village est sur la route), 5 km ou plus = 0.
+          À partir d'OpenStreetMap, on mesure la <b>distance à vol d'oiseau jusqu'à la route la plus proche</b>,
+          convertie en note sur 100 : 0 km = 100 (le village est sur la route), 5 km ou plus = 0.
+        </p>
+        <h3>Ville, marché et point d'eau les plus proches (distance en km)</h3>
+        <p>
+          À partir d'OpenStreetMap, on mesure pour chaque communauté la <b>distance à vol d'oiseau</b> jusqu'à
+          la ville, au marché et au point d'eau (rivière, plan d'eau, puits, forage) les plus proches. Ces trois
+          valeurs sont affichées <b>telles quelles, en kilomètres</b> — sans être transformées en note. Le lecteur
+          juge lui-même : « 12 km » se lit directement.
         </p>
         <p>
-          Les indicateurs « accès marché » et « proximité eau » ont été <b>retirés</b> : la donnée disponible
-          aujourd'hui n'est pas assez fiable pour être présentée comme une mesure de terrain. Ils reviendront
-          quand une source hydrographique et une source « marchés » vérifiées seront intégrées.
+          Limites à connaître : la couverture d'OpenStreetMap est bonne pour les villes et l'eau de surface, mais
+          <b> partielle pour les marchés hebdomadaires ruraux et les puits</b>. Un marché ou un puits proche non
+          cartographié peut faire apparaître une distance plus grande que la réalité. À terme, « accès marché »
+          sera remplacé par la distance aux 7 centres de collecte HERS, une fois ceux-ci implantés.
         </p>
 
         <h2>6. Ce qu'il faut garder en tête</h2>
