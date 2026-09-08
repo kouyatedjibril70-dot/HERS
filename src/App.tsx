@@ -15,6 +15,45 @@ const reduceMotion=typeof window!=="undefined"&&!!window.matchMedia&&window.matc
 // POPULATION est un champ partiellement manquant (valeur `null`) — Number(null)===0 est un nombre "fini",
 // donc un simple Number.isFinite(Number(...)) traiterait à tort "population inconnue" comme "population = 0".
 const hasPop=(r:any)=>r.POPULATION!==null&&r.POPULATION!==undefined&&r.POPULATION!==""&&Number.isFinite(Number(r.POPULATION));
+
+// --- Synchronisation de l'état avec l'URL (?vue=…&pays=…&p=…) : un rechargement ou un lien
+//     partagé rouvre la plateforme exactement dans le même onglet, les mêmes filtres, la même pondération.
+type Tab="dashboard"|"communities"|"spatial"|"method";
+const DEFAULT_WEIGHTS={pop:0,dist:45,dens:20,recent:35};
+const TAB_TO_PARAM:Record<Tab,string>={dashboard:"",communities:"communities",spatial:"spatial",method:"methode"};
+const PARAM_TO_TAB:Record<string,Tab>={communities:"communities",spatial:"spatial",methode:"method"};
+const PAYS_TO_PARAM:Record<string,string>={"Tous":"","Sénégal":"sn","Gambie":"gm"};
+const PARAM_TO_PAYS:Record<string,string>={sn:"Sénégal",gm:"Gambie"};
+function readUrlState(){
+ const q=new URLSearchParams(window.location.search);
+ let weights={...DEFAULT_WEIGHTS};
+ const p=q.get("p");
+ if(p&&/^\d+-\d+-\d+-\d+$/.test(p)){const[pop,dist,dens,recent]=p.split("-").map(Number);weights={pop,dist,dens,recent};}
+ return {
+  tab:PARAM_TO_TAB[q.get("vue")||""]||"dashboard" as Tab,
+  country:PARAM_TO_PAYS[q.get("pays")||""]||"Tous",
+  region:q.get("region")||"Toutes",
+  lang:q.get("langue")||"Toutes",
+  bureau:q.get("bureau")||"Tous",
+  query:q.get("q")||"",
+  only:q.get("sel")==="1",
+  weights,
+ };
+}
+function writeUrlState(s:{tab:Tab;country:string;region:string;lang:string;bureau:string;query:string;only:boolean;weights:typeof DEFAULT_WEIGHTS}){
+ const q=new URLSearchParams();
+ if(s.tab!=="dashboard")q.set("vue",TAB_TO_PARAM[s.tab]);
+ if(s.country!=="Tous")q.set("pays",PAYS_TO_PARAM[s.country]||"");
+ if(s.region!=="Toutes")q.set("region",s.region);
+ if(s.lang!=="Toutes")q.set("langue",s.lang);
+ if(s.bureau!=="Tous")q.set("bureau",s.bureau);
+ if(s.query)q.set("q",s.query);
+ if(s.only)q.set("sel","1");
+ const w=s.weights;
+ if(w.pop!==DEFAULT_WEIGHTS.pop||w.dist!==DEFAULT_WEIGHTS.dist||w.dens!==DEFAULT_WEIGHTS.dens||w.recent!==DEFAULT_WEIGHTS.recent)q.set("p",`${w.pop}-${w.dist}-${w.dens}-${w.recent}`);
+ const qs=q.toString();
+ window.history.replaceState(null,"",window.location.pathname+(qs?"?"+qs:"")+window.location.hash);
+}
 function CountUp({value,dur=650}:{value:number;dur?:number}){
  const [n,setN]=useState(reduceMotion?value:0);const prev=useRef(reduceMotion?value:0);
  useEffect(()=>{const from=prev.current,to=value;prev.current=value;if(from===to||reduceMotion){setN(to);return;}
@@ -180,10 +219,12 @@ function CommunitiesTable({ rows, onSelect, preset }: { rows: Community[]; onSel
   );
 }
 export default function App(){
- const [country,setCountry]=useState("Tous"),[region,setRegion]=useState("Toutes"),[lang,setLang]=useState("Toutes"),[bureau,setBureau]=useState("Tous"),[query,setQuery]=useState(""),[only,setOnly]=useState(false),[showSel,setShowSel]=useState(true),[showUnsel,setShowUnsel]=useState(true),[tab,setTab]=useState<"dashboard"|"communities"|"spatial"|"method">("dashboard"),[drawer,setDrawer]=useState<Community|null>(null);
- const [targets,setTargets]=useState({Sénégal:642,Gambie:161}),[weights,setWeights]=useState({pop:0,dist:45,dens:20,recent:35});
+ const [urlInit]=useState(readUrlState);
+ const [country,setCountry]=useState(urlInit.country),[region,setRegion]=useState(urlInit.region),[lang,setLang]=useState(urlInit.lang),[bureau,setBureau]=useState(urlInit.bureau),[query,setQuery]=useState(urlInit.query),[only,setOnly]=useState(urlInit.only),[showSel,setShowSel]=useState(true),[showUnsel,setShowUnsel]=useState(true),[tab,setTab]=useState<"dashboard"|"communities"|"spatial"|"method">(urlInit.tab),[drawer,setDrawer]=useState<Community|null>(null);
+ const [targets,setTargets]=useState({Sénégal:642,Gambie:161}),[weights,setWeights]=useState(urlInit.weights);
  const [toast,setToast]=useState(false);const firstW=useRef(true);
  useEffect(()=>{if(firstW.current){firstW.current=false;return;}setToast(true);const id=window.setTimeout(()=>setToast(false),1600);return ()=>window.clearTimeout(id);},[weights]);
+ useEffect(()=>{writeUrlState({tab,country,region,lang,bureau,query,only,weights});},[tab,country,region,lang,bureau,query,only,weights]);
  useEffect(()=>{if(tab==="spatial"){setRegion("Toutes");setLang("Toutes");setBureau("Tous");}},[tab]);
  const base=useMemo(()=>scoreAll(communitiesIndexed,weights),[weights]);
  const data=useMemo(()=>base.map(r=>{const t=targets[r.Pays as "Sénégal"|"Gambie"];return {...r,selected:r.rank<=t,_id:r._srcId} as Community}),[base,targets]);
