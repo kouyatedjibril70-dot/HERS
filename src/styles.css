@@ -131,8 +131,8 @@ main>section+section{margin-top:24px}
 .ghost:hover svg{transform:rotate(180deg)}
 
 /* --- 7. Navigation & onglets --- */
-.tabstrip{flex:1 1 auto;min-width:0;justify-content:center;background:none;border:0;border-bottom:0;padding:0;gap:4px}
-.tabstrip button{padding:8px 16px;gap:8px;border:0;border-radius:999px;color:#9aa8bf;font-weight:500;font-size:13px;background:none;margin-bottom:0;transition:background .18s ease,color .18s ease}
+.tabstrip{flex:1 1 auto;justify-content:center;flex-wrap:wrap;background:none;border:0;border-bottom:0;padding:0;gap:4px;overflow:visible}
+.tabstrip button{padding:8px 14px;gap:7px;border:0;border-radius:999px;color:#9aa8bf;font-weight:500;font-size:13px;background:none;margin-bottom:0;white-space:nowrap;transition:background .18s ease,color .18s ease}
 .tabstrip svg{width:17px;height:17px;color:#7f8da5;transition:color .18s ease}
 .tabstrip button:hover{background:rgba(255,255,255,.08);color:#e2e8f0}
 .tabstrip button.active{background:rgba(255,255,255,.13);color:#fff;font-weight:600}
