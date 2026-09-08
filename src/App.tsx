@@ -54,6 +54,25 @@ function writeUrlState(s:{tab:Tab;country:string;region:string;lang:string;burea
  const qs=q.toString();
  window.history.replaceState(null,"",window.location.pathname+(qs?"?"+qs:"")+window.location.hash);
 }
+
+// Lecture en clair de la sélection courante — recalculée sur l'ensemble VISIBLE (filtres + pondération).
+function lectureSelection(rows:Community[]):{lecture:string;note:string}|null{
+ const sel=rows.filter(r=>r.selected);
+ if(!sel.length)return null;
+ const taux=sel.length/rows.length*100;
+ const dists=sel.map(r=>Number(r["Distance bureau (km)"])).filter(Number.isFinite);
+ const distMoy=dists.length?dists.reduce((a,b)=>a+b,0)/dists.length:0;
+ const eloignees=sel.filter(r=>Number(r["Distance bureau (km)"])>100).length;
+ const partEloignee=eloignees/sel.length*100;
+ const s=sel.length>1?"s":"";
+ const tete=`${sel.length} communauté${s} retenue${s} dans la vue actuelle (${taux.toFixed(0)} % des ${rows.length} affichées), à ${distMoy.toFixed(0)} km en moyenne d'un bureau.`;
+ const queue=partEloignee<10
+  ?`Seule une petite minorité (${partEloignee.toFixed(0)} %) est à plus de 100 km d'un bureau — profil favorable à la supervision.`
+  :partEloignee<25
+   ?`Une minorité notable (${partEloignee.toFixed(0)} %) est à plus de 100 km d'un bureau et mérite attention lors de la planification de la supervision.`
+   :`Une part importante (${partEloignee.toFixed(0)} %) est à plus de 100 km d'un bureau — la logistique de supervision devra être pensée dès la planification.`;
+ return {lecture:`${tete} ${queue}`,note:"Se recalcule avec les filtres et la pondération. Pour les arbitrages détaillés (communautés éloignées, concentration par bureau), voir l'onglet Analyse spatiale."};
+}
 function CountUp({value,dur=650}:{value:number;dur?:number}){
  const [n,setN]=useState(reduceMotion?value:0);const prev=useRef(reduceMotion?value:0);
  useEffect(()=>{const from=prev.current,to=value;prev.current=value;if(from===to||reduceMotion){setN(to);return;}
@@ -244,6 +263,7 @@ export default function App(){
  </>}
  {tab==="method"?<Method onGoDashboard={()=>{setTab("dashboard");window.scrollTo({top:0,behavior:"smooth"})}}/>:tab==="spatial"?<Spatial all={data} rows={filtered} onSelect={setDrawer} onBureau={b=>{setBureau(b);setTab("communities");window.scrollTo({top:0,behavior:"smooth"})}}/>:tab==="dashboard"?<section className="grid2"><div className="map-card"><div className="card-head"><div><h2><MapPin size={15}/> Carte des communautés</h2><div className="head-meta"><span className="cnt-badge">{mapRows.length} visibles</span><span className="status-live"><i/>Données à jour</span></div></div></div><div className="map-wrap"><MapContainer center={center} zoom={6} scrollWheelZoom zoomControl={false}><ZoomControl position="topright"/><Recenter center={center}/><LayersControl position="topright">{BASEMAPS.map((b,i)=><LayersControl.BaseLayer key={b.name} name={b.name} checked={i===0}><TileLayer url={b.url} attribution={b.attribution} subdomains={b.subdomains??"abc"} maxNativeZoom={b.maxNativeZoom}/></LayersControl.BaseLayer>)}</LayersControl>{mapRows.filter(r=>Number.isFinite(Number(r["Latitude référence"]))).map(r=>{const zc=r.selected?ZONE_COLORS.selection:ZONE_COLORS.Sénégal;return <CircleMarker key={r._id} center={[Number(r["Latitude référence"]),Number(r["Longitude référence"])]} radius={r.selected?6:3.5} pathOptions={{color:zc,fillColor:zc,weight:r.selected?1.5:1,fillOpacity:r.selected?.9:.4,className:r.selected?"pmk":""}} eventHandlers={{click:()=>setDrawer(r)}}/>;})}</MapContainer><div className="map-legend"><button type="button" className={showSel?"":"off"} onClick={()=>setShowSel(v=>!v)}><i style={{background:ZONE_COLORS.selection}}/>Sélectionnée</button><button type="button" className={showUnsel?"":"off"} onClick={()=>setShowUnsel(v=>!v)}><i style={{background:ZONE_COLORS.Sénégal}}/>Non sélectionnée</button></div></div></div>
  <div className="rail">
+ {(()=>{const l=lectureSelection(filtered);return <div className="side-card lecture-card"><div className="card-title"><FileText size={16}/> Lecture de la sélection</div>{l?<><p className="lecture-txt">{l.lecture}</p><p className="muted">{l.note}</p></>:<p className="muted">Aucune communauté retenue dans la vue actuelle — ajustez les filtres.</p>}</div>;})()}
  <div className="hint-panel"><MapPin size={20}/><div><b>Explorer la carte</b><span>Cliquez sur une communauté pour afficher son profil détaillé.</span></div></div>
  <LangsPanel data={data}/>
  <div className="side-card weight-card"><div className="card-title"><SlidersHorizontal size={17}/> Pondération du score</div><p className="muted">Testez différents scénarios. Le score est recalculé automatiquement.</p>{([["pop","Population","Nombre d'habitants de la communauté"],["dist","Distance bureau","Distance au bureau de coordination le plus proche"],["dens","Densité / proximité","Nombre d'autres communautés dans un rayon de 25 km"],["recent","Récence PRCC","Ancienneté de la fin du PRCC — plus c'est récent, mieux c'est"]] as [string,string,string][]).map(([k,l,tip])=>{const v=(weights as any)[k];const p=v/50*100;return <div className="weight" key={k}><span className="wlabel" data-tip={tip}>{withPrcc(l)}</span><input type="range" min={0} max={50} step={5} value={v} style={{background:`linear-gradient(90deg,#60a5fa 0 ${p}%,#e2e8f0 ${p}% 100%)`}} onChange={e=>setWeights({...weights,[k]:Number(e.target.value)})}/><b className="wval">{v}</b></div>;})}<div className="weight-total"><span>Total</span><b>{Object.values(weights).reduce((a,b)=>a+b,0)}</b><small>/ 100</small><div className="wprog"><i style={{width:`${Math.min(100,Object.values(weights).reduce((a,b)=>a+b,0))}%`}}/></div></div><button className="linkbtn" onClick={()=>setWeights({pop:0,dist:45,dens:20,recent:35})}>Réinitialiser</button><button className="linkbtn" onClick={()=>{setTab("method");window.scrollTo({top:0,behavior:"smooth"})}}>Comment ce score est-il calculé ? → Méthode</button><div className="callout"><b>Langue</b><span>La langue n'influence pas le score, mais on vérifie qu'aucune langue n'est mise de côté par les autres critères — utile pour anticiper les besoins en animateurs par langue.</span></div><div className="callout warn"><b>Population Gambie</b><span>Non disponible dans la base actuelle.</span></div></div>
