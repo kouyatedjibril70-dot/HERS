@@ -242,3 +242,25 @@ main>section+section{margin-top:24px}
 .ctable .c-score .bar{flex:1;height:6px;border-radius:999px;background:#e2e8f0;overflow:hidden}
 .ctable .c-score .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#16a34a)}
 .ctable .c-score b{font-variant-numeric:tabular-nums;color:#0f172a;min-width:20px;text-align:right}
+
+/* --- Onglet « Méthode » : document de référence --- */
+.method{padding:8px 0 40px}
+.method-doc{max-width:760px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:32px 36px;color:#334155;line-height:1.65;font-size:14.5px}
+.method-doc .linkbtn{display:inline;margin:0;padding:0;font-size:inherit}
+.method-eyebrow{margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8}
+.method-doc h1{margin:0 0 10px;font-size:24px;color:#0f172a;line-height:1.25}
+.method-lead{margin:0 0 8px;font-size:15.5px;color:#475569}
+.method-doc h2{margin:30px 0 10px;font-size:16px;color:#0f172a;padding-top:16px;border-top:1px solid #eef1f5}
+.method-doc h2:first-of-type{border-top:0;padding-top:0}
+.method-doc h3{margin:18px 0 4px;font-size:13.5px;color:#1e293b}
+.method-doc p{margin:0 0 10px}
+.method-doc ul,.method-doc ol{margin:0 0 10px;padding-left:22px}
+.method-doc li{margin:5px 0}
+.method-doc b{color:#0f172a}
+.method-table{overflow-x:auto;margin:0 0 12px;border:1px solid #e2e8f0;border-radius:10px}
+.method-table table{width:100%;border-collapse:collapse;font-size:13px}
+.method-table th{text-align:left;background:#f8fafc;padding:9px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#64748b;border-bottom:1px solid #e2e8f0}
+.method-table td{padding:9px 12px;border-bottom:1px solid #eef1f5;vertical-align:top}
+.method-table tr:last-child td{border-bottom:0}
+.method-doc .callout{margin:0 0 8px}
+.method-foot{margin-top:26px;padding-top:14px;border-top:1px solid #eef1f5;font-size:12.5px;color:#94a3b8}
