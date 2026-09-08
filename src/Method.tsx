@@ -31,15 +31,15 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             </tbody>
           </table>
         </div>
-        <p>Deux autres critères existent dans le modèle mais sont <b>volontairement à 0 %</b> aujourd'hui :</p>
+        <p>Un quatrième critère, la <b>Population</b>, existe dans le modèle mais est <b>volontairement à 0 %</b> aujourd'hui :</p>
         <div className="callout">
           <b>Population</b>
           <span>La donnée manque pour toute la Gambie et environ 40 % du Sénégal. L'inclure pénaliserait injustement les communautés sans chiffre.</span>
         </div>
-        <div className="callout">
-          <b>Durée du <Prcc /></b>
-          <span>Elle reflète le calendrier des bailleurs, pas une caractéristique propre à la communauté.</span>
-        </div>
+        <p>
+          La durée du <Prcc /> n'est <b>pas</b> un critère : tous les <Prcc /> durent 3 ans. Les quelques valeurs
+          de 1 ou 2 ans qui apparaissent dans la base sont des erreurs de saisie, pas de vraies différences.
+        </p>
 
         <h2>3. De la valeur brute à la note</h2>
         <ol>
