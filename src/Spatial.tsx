@@ -63,8 +63,13 @@ function jitter(seed: string): [number, number] {
   return [a * 0.018, b * 0.018];
 }
 
-type Mode = "statut" | "score" | "langue" | "distance" | "prcc" | "population" | "agri" | "route";
+type Mode = "statut" | "score" | "langue" | "distance" | "prcc" | "population" | "agri" | "route" | "marche" | "eau" | "ville";
 
+// Distance à une ressource -> couleur (vert = proche/bon, rouge = loin).
+function distColor(d: number, b1: number, b2: number, b3: number): string {
+  if (!Number.isFinite(d)) return "#d7dee7";
+  return d <= b1 ? "#2f9e6f" : d <= b2 ? "#7bbf4f" : d <= b3 ? "#e8a13a" : "#d64550";
+}
 function colorFor(r: Community, mode: Mode): string {
   if (mode === "statut") return r.selected ? "#176bd1" : "#9aabbe";
   if (mode === "score") { const s = r.score; return s >= 70 ? "#1c4a86" : s >= 55 ? "#3d7ec0" : s >= 40 ? "#7ba7d4" : "#c3d4e6"; }
@@ -73,6 +78,9 @@ function colorFor(r: Community, mode: Mode): string {
   if (mode === "prcc") { const y = num(r, "Année Fin PRCC"); return y >= 2024 ? "#1c4a86" : y >= 2019 ? "#3d7ec0" : y >= 2014 ? "#7ba7d4" : "#c3d4e6"; }
   if (mode === "agri") { const v = agriScore(r); return v >= 50 ? "#1c4a86" : v >= 30 ? "#3d7ec0" : v >= 15 ? "#7ba7d4" : "#c3d4e6"; }
   if (mode === "route") { const v = roadAccessScore(r); return v >= 80 ? "#1c4a86" : v >= 60 ? "#3d7ec0" : v >= 40 ? "#7ba7d4" : "#c3d4e6"; }
+  if (mode === "marche") return distColor(num(r, "dist_marche_osm_km"), 10, 25, 50);
+  if (mode === "eau") return distColor(num(r, "dist_eau_osm_km"), 2, 10, 25);
+  if (mode === "ville") return distColor(num(r, "dist_ville_km"), 5, 15, 30);
   const p = num(r, "POPULATION");
   if (!Number.isFinite(p)) return "#d7dee7";
   return p > 8000 ? "#1c4a86" : p > 3000 ? "#3d7ec0" : p > 1000 ? "#7ba7d4" : "#c3d4e6";
@@ -85,6 +93,9 @@ function legendFor(mode: Mode, langs: string[]): { c: string; l: string }[] {
   if (mode === "prcc") return [{ c: "#c3d4e6", l: "≤ 2013" }, { c: "#7ba7d4", l: "2014 – 2018" }, { c: "#3d7ec0", l: "2019 – 2023" }, { c: "#1c4a86", l: "≥ 2024" }];
   if (mode === "agri") return [{ c: "#c3d4e6", l: "< 15 %" }, { c: "#7ba7d4", l: "15 – 30 %" }, { c: "#3d7ec0", l: "30 – 50 %" }, { c: "#1c4a86", l: "≥ 50 %" }];
   if (mode === "route") return [{ c: "#c3d4e6", l: "éloignée" }, { c: "#7ba7d4", l: "proche" }, { c: "#3d7ec0", l: "très proche" }, { c: "#1c4a86", l: "sur la route" }];
+  if (mode === "marche") return [{ c: "#2f9e6f", l: "≤ 10 km" }, { c: "#7bbf4f", l: "10 – 25" }, { c: "#e8a13a", l: "25 – 50" }, { c: "#d64550", l: "> 50" }];
+  if (mode === "eau") return [{ c: "#2f9e6f", l: "≤ 2 km" }, { c: "#7bbf4f", l: "2 – 10" }, { c: "#e8a13a", l: "10 – 25" }, { c: "#d64550", l: "> 25" }];
+  if (mode === "ville") return [{ c: "#2f9e6f", l: "≤ 5 km" }, { c: "#7bbf4f", l: "5 – 15" }, { c: "#e8a13a", l: "15 – 30" }, { c: "#d64550", l: "> 30" }];
   return [{ c: "#c3d4e6", l: "< 1 000" }, { c: "#7ba7d4", l: "1 000 – 3 000" }, { c: "#3d7ec0", l: "3 000 – 8 000" }, { c: "#1c4a86", l: "> 8 000" }, { c: "#d7dee7", l: "n/d" }];
 }
 
@@ -94,6 +105,21 @@ function bucketLabelFor(r: Community, mode: Mode, langs: string[]): string {
   if (mode === "langue") return r["Langue normalisée"] || "—";
   const color = colorFor(r, mode);
   return legendFor(mode, langs).find((x) => x.c === color)?.l ?? "";
+}
+
+// Valeur brute du mode courant, pour l'infobulle d'un point sur la carte (« la donnée sous les yeux »).
+function modeValue(r: Community, mode: Mode): string | null {
+  const km = (f: string) => { const v = Number(r[f]); return Number.isFinite(v) ? `${v.toFixed(1)} km` : "donnée absente"; };
+  if (mode === "marche") return `marché le plus proche : ${km("dist_marche_osm_km")}`;
+  if (mode === "eau") return `point d'eau le plus proche : ${km("dist_eau_osm_km")}`;
+  if (mode === "ville") return `ville la plus proche : ${km("dist_ville_km")}`;
+  if (mode === "distance") { const v = num(r, "Distance bureau (km)"); return Number.isFinite(v) ? `bureau : ${v.toFixed(0)} km` : null; }
+  if (mode === "score") return `score : ${r.score}/100`;
+  if (mode === "population") { const v = num(r, "POPULATION"); return Number.isFinite(v) ? `population : ${v.toLocaleString("fr-FR")}` : "population : n/d"; }
+  if (mode === "agri") { const v = Number(r["pct_cultures_5km"]); return Number.isFinite(v) ? `cultures dans 5 km : ${v.toFixed(0)} %` : null; }
+  if (mode === "route") { const v = Number(r["dist_route_km"]); return Number.isFinite(v) ? `route la plus proche : ${v.toFixed(1)} km` : null; }
+  if (mode === "prcc") { const v = num(r, "Année Fin PRCC"); return Number.isFinite(v) ? `fin PRCC : ${v.toFixed(0)}` : null; }
+  return null;
 }
 
 // Fonds de carte proposés dans le sélecteur de couches (aucune clé requise).
@@ -311,6 +337,29 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     };
   }
 
+  // --- Modes « distance à une ressource » (OpenStreetMap, à vol d'oiseau) : marché, eau, ville.
+  //     Données de contexte uniquement — n'entrent pas dans le score de sélection.
+  if (mode === "marche" || mode === "eau" || mode === "ville") {
+    const cfg = {
+      marche: { field: "dist_marche_osm_km", proche: 10, loin: 50, nom: "un marché", limite: "La couverture OpenStreetMap est partielle pour les marchés hebdomadaires ruraux : une distance élevée peut surestimer l'éloignement réel." },
+      eau: { field: "dist_eau_osm_km", proche: 2, loin: 25, nom: "un point d'eau (rivière, plan d'eau, puits, forage)", limite: "Couverture OpenStreetMap bonne pour l'eau de surface, partielle pour les puits et forages." },
+      ville: { field: "dist_ville_km", proche: 5, loin: 30, nom: "une ville", limite: "La ville la plus proche est un repère d'accès aux services, au transport et aux débouchés." },
+    }[mode];
+    const vals = rows.map((r) => Number(r[cfg.field])).filter((v) => Number.isFinite(v));
+    if (vals.length === 0) return null;
+    const med = [...vals].sort((a, b) => a - b)[Math.floor(vals.length / 2)];
+    const nProche = vals.filter((v) => v <= cfg.proche).length;
+    const nLoin = vals.filter((v) => v > cfg.loin).length;
+    const partProche = pct(nProche, vals.length);
+    return {
+      observation: `Distance médiane à ${cfg.nom} : ${med.toFixed(1)} km sur les communautés affichées. ${partProche.toFixed(0)} % sont à moins de ${cfg.proche} km, ${pct(nLoin, vals.length).toFixed(0)} % à plus de ${cfg.loin} km.`,
+      lecture: partProche >= 50
+        ? `La majorité de ce sous-ensemble est à faible distance de ${cfg.nom} — un contexte plutôt favorable pour ce sous-ensemble.`
+        : `Une part importante de ce sous-ensemble est éloignée de ${cfg.nom} cartographié — à vérifier localement avant toute conclusion.`,
+      retenir: `Indicateur de contexte, hors score de sélection. ${cfg.limite}`,
+    };
+  }
+
   return null;
 }
 
@@ -479,7 +528,11 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                     fillOpacity: r.selected ? 0.85 : 0.5,
                   }}
                   eventHandlers={{ click: () => onSelect(r) }}
-                />
+                >
+                  {(() => { const mv = modeValue(r, mode); return (
+                    <Tooltip direction="top" offset={[0, -4]}>{r.Communauté}{mv ? ` — ${mv}` : ""}</Tooltip>
+                  ); })()}
+                </CircleMarker>
               )}
               {showTableauCompare && (() => {
                 const t = tableauData[code];
@@ -586,7 +639,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
   }
   att.push({ c: "#2f9e6f", t: `Score moyen des retenues ${gS.score.toFixed(1)} contre ${gN.score.toFixed(1)} hors sélection — écart de ${(gS.score - gN.score).toFixed(1)} points.` });
 
-  const segs: [Mode, string][] = [["statut", "Statut"], ["score", "Score"], ["langue", "Langue"], ["distance", "Distance bureau"], ["prcc", "Fin PRCC"], ["population", "Population"], ["agri", "Potentiel agricole"], ["route", "Accès route"]];
+  const segs: [Mode, string][] = [["statut", "Statut"], ["score", "Score"], ["langue", "Langue"], ["distance", "Distance bureau"], ["prcc", "Fin PRCC"], ["population", "Population"], ["agri", "Potentiel agricole"], ["route", "Accès route"], ["marche", "Marché proche"], ["eau", "Point d'eau proche"], ["ville", "Ville proche"]];
 
   return (
     <section className="sp">
