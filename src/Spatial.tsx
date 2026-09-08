@@ -446,6 +446,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
   const [showVilles, setShowVilles] = useState(false);
   const [showMarches, setShowMarches] = useState(false);
   const [showEau, setShowEau] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false); // panneau « Couches à superposer » replié par défaut
   const [correctionMode, setCorrectionMode] = useState(false);
   const [corrections, setCorrections] = useState<Record<string, Correction>>(() => {
     try { return JSON.parse(localStorage.getItem(CORRECTIONS_KEY) || "{}"); } catch { return {}; }
@@ -889,20 +890,27 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             </div>
             <input type="range" min={5} max={150} step={5} value={radius} onChange={(e) => { setRadius(Number(e.target.value)); setRadiusOn(true); setRadiusTouched(true); }} />
             <label className="toggle" style={{ display: "flex", gap: 7 }}><input type="checkbox" checked={radiusOn} onChange={(e) => { setRadiusOn(e.target.checked); if (e.target.checked) setRadiusTouched(true); }} /> Tracer le rayon sur la carte</label>
-            <label className="toggle" style={{ display: "flex", gap: 7, marginTop: 6 }}><input type="checkbox" checked={showRoads} onChange={(e) => setShowRoads(e.target.checked)} /> Afficher les routes principales (OSM)</label>
-            <div className="sp-poi-toggles">
-              <span className="sp-poi-title">Superposer les points OpenStreetMap</span>
-              <label className="toggle"><input type="checkbox" checked={showVilles} onChange={(e) => setShowVilles(e.target.checked)} /> <i style={{ background: "#7c8aa0" }} /> Villes <span className="muted">(269)</span></label>
-              <label className="toggle"><input type="checkbox" checked={showMarches} onChange={(e) => setShowMarches(e.target.checked)} /> <i style={{ background: "#f0821e" }} /> Marchés <span className="muted">(441)</span></label>
-              <label className="toggle"><input type="checkbox" checked={showEau} onChange={(e) => setShowEau(e.target.checked)} /> <i style={{ background: "#3d8fc0" }} /> Points d'eau <span className="muted">(≈ 3 000)</span></label>
-              {showEau && <p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>Cours d'eau (petits points clairs), plans d'eau, puits et sources. Couverture OpenStreetMap partielle pour les puits et les marchés ruraux.</p>}
+            <div className={"sp-layers" + (layersOpen ? " open" : "")}>
+              <button type="button" className="sp-layers-head" onClick={() => setLayersOpen((v) => !v)}>
+                <span>Couches à superposer sur la carte{(() => { const n = [showRoads, showVilles, showMarches, showEau, showLandcover].filter(Boolean).length; return n > 0 ? <span className="sp-layers-count">{n}</span> : null; })()}</span>
+                <span className="sp-layers-caret">{layersOpen ? "Masquer ▾" : "Afficher ▸"}</span>
+              </button>
+              {layersOpen && (
+                <div className="sp-layers-body">
+                  <label className="toggle"><input type="checkbox" checked={showRoads} onChange={(e) => setShowRoads(e.target.checked)} /> <i style={{ background: "#e67e22" }} /> Routes principales (OSM)</label>
+                  <label className="toggle"><input type="checkbox" checked={showVilles} onChange={(e) => setShowVilles(e.target.checked)} /> <i style={{ background: "#7c8aa0" }} /> Villes <span className="muted">(269)</span></label>
+                  <label className="toggle"><input type="checkbox" checked={showMarches} onChange={(e) => setShowMarches(e.target.checked)} /> <i style={{ background: "#f0821e" }} /> Marchés <span className="muted">(441)</span></label>
+                  <label className="toggle"><input type="checkbox" checked={showEau} onChange={(e) => setShowEau(e.target.checked)} /> <i style={{ background: "#3d8fc0" }} /> Points d'eau <span className="muted">(≈ 3 000)</span></label>
+                  {showEau && <p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>Cours d'eau (petits points clairs), plans d'eau, puits et sources. Couverture OpenStreetMap partielle pour les puits et les marchés ruraux.</p>}
+                  <label className="toggle"><input type="checkbox" checked={showLandcover} onChange={(e) => setShowLandcover(e.target.checked)} /> <i style={{ background: "#5a9e5a" }} /> Occupation du sol classée (satellite)</label>
+                </div>
+              )}
             </div>
             <label className="toggle" style={{ display: "flex", gap: 7, marginTop: 6 }}>
               <input type="checkbox" checked={showTableauCompare} onChange={(e) => setShowTableauCompare(e.target.checked)} />
               Comparer avec Tableau Public
             </label>
             {showTableauCompare && <p className="muted" style={{ fontSize: 12 }}>Tableau Public : une autre extraction de la même base de données, utilisée ici comme second regard sur les coordonnées. Points violets = position dans Tableau Public. Une ligne relie chaque communauté à sa position actuelle si l'écart dépasse 500 m.</p>}
-            <label className="toggle" style={{ display: "flex", gap: 7, marginTop: 6 }}><input type="checkbox" checked={showLandcover} onChange={(e) => setShowLandcover(e.target.checked)} /> Occupation du sol classée (imagerie satellite)</label>
             <label className="toggle" style={{ display: "flex", gap: 7, marginTop: 6 }}><input type="checkbox" checked={correctionMode} onChange={(e) => setCorrectionMode(e.target.checked)} /> <Move size={13} /> Mode correction de position{Object.keys(corrections).length > 0 && <span style={{ marginLeft: 4, color: "#e11d48", fontWeight: 700 }}>{Object.keys(corrections).length}</span>}</label>
             {correctionMode && <p className="muted" style={{ marginTop: 4 }}>Glissez un point (rouge) vers sa vraie position — chaque correction est enregistrée automatiquement et transmise à l'équipe data.</p>}
             {Object.keys(corrections).length > 0 && <button className="linkbtn" onClick={downloadCorrections}>⬇ Télécharger mes {Object.keys(corrections).length} correction(s) (CSV)</button>}
