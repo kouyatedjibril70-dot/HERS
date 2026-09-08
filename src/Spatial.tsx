@@ -184,6 +184,43 @@ function RoadsLayer({ data }: { data: any }) {
   return null;
 }
 
+// Couche de points d'intérêt OSM (villes / marchés / points d'eau) en overlay, rendu canvas
+// (jusqu'à ~3 000 points pour l'eau) et création impérative comme RoadsLayer.
+const EAU_LABEL: Record<string, string> = { river: "Cours d'eau", water: "Plan d'eau", well: "Puits", spring: "Source", tap: "Point d'eau" };
+function PoiLayer({ data, kind }: { data: any; kind: "villes" | "marches" | "eau" }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!data) return;
+    const canvas = L.canvas({ padding: 0.5 });
+    const layer = L.geoJSON(data, {
+      pointToLayer: (f: any, latlng: L.LatLng) => {
+        const p = f.properties || {};
+        let style: L.CircleMarkerOptions;
+        if (kind === "villes") {
+          const city = p.kind === "city";
+          style = { renderer: canvas, radius: city ? 4.5 : 3, color: "#31405a", weight: 1, fillColor: "#7c8aa0", fillOpacity: 0.9 };
+        } else if (kind === "marches") {
+          style = { renderer: canvas, radius: 3.6, color: "#8a4406", weight: 1, fillColor: "#f0821e", fillOpacity: 0.92 };
+        } else if (p.kind === "river") {
+          style = { renderer: canvas, radius: 1.3, weight: 0, fillColor: "#5aa9d6", fillOpacity: 0.5 };
+        } else if (p.kind === "well") {
+          style = { renderer: canvas, radius: 2.8, color: "#1e5f88", weight: 1, fillColor: "#3d8fc0", fillOpacity: 0.95 };
+        } else if (p.kind === "spring") {
+          style = { renderer: canvas, radius: 3, color: "#1e5f88", weight: 1, fillColor: "#59c1e8", fillOpacity: 0.95 };
+        } else {
+          style = { renderer: canvas, radius: 2.6, color: "#2f7fb5", weight: 0.8, fillColor: "#8fc7e4", fillOpacity: 0.8 };
+        }
+        const m = L.circleMarker(latlng, style);
+        const label = p.name || (kind === "marches" ? "Marché" : kind === "villes" ? "Ville" : EAU_LABEL[p.kind] || "Point d'eau");
+        m.bindTooltip(String(label));
+        return m;
+      },
+    }).addTo(map);
+    return () => { map.removeLayer(layer); };
+  }, [map, data, kind]);
+  return null;
+}
+
 // ---- Analyse en 4 temps (Observation → Interprétation → Implication → À retenir) des deux ----
 // ---- outils "Distance autour d'un bureau" et "Communautés éloignées". Tout est recalculé   ----
 // ---- à chaque changement de filtre — aucune phrase figée, aucun texte non vérifié.          ----
@@ -404,11 +441,22 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
   const [roadsData, setRoadsData] = useState<any>(null);
   const [showRoads, setShowRoads] = useState(false);
   const [showLandcover, setShowLandcover] = useState(false);
+  // Couches de points OSM en overlay — chargées à la demande (le fichier eau fait ~360 Ko).
+  const [poi, setPoi] = useState<{ villes: any; marches: any; eau: any }>({ villes: null, marches: null, eau: null });
+  const [showVilles, setShowVilles] = useState(false);
+  const [showMarches, setShowMarches] = useState(false);
+  const [showEau, setShowEau] = useState(false);
   const [correctionMode, setCorrectionMode] = useState(false);
   const [corrections, setCorrections] = useState<Record<string, Correction>>(() => {
     try { return JSON.parse(localStorage.getItem(CORRECTIONS_KEY) || "{}"); } catch { return {}; }
   });
   useEffect(() => { fetch(`${DATA_BASE}roads_major.geojson`).then((r) => r.json()).then(setRoadsData).catch(() => {}); }, []);
+  useEffect(() => {
+    ([["villes", showVilles], ["marches", showMarches], ["eau", showEau]] as ["villes" | "marches" | "eau", boolean][])
+      .forEach(([k, on]) => {
+        if (on && !poi[k]) fetch(`${DATA_BASE}poi_${k}.geojson`).then((r) => r.json()).then((d) => setPoi((prev) => ({ ...prev, [k]: d }))).catch(() => {});
+      });
+  }, [showVilles, showMarches, showEau, poi]);
 
   // Comparaison avec les positions de « Tableau Public » (autre extraction de la base Tostan).
   const [tableauData, setTableauData] = useState<Record<string, { lat: number; lon: number }>>({});
@@ -676,6 +724,9 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                 <ImageOverlay url={`${DATA_BASE}worldcover_senegal_gambie.png`} bounds={LANDCOVER_BOUNDS} opacity={0.75} attribution="ESA WorldCover 2021" />
               )}
               {showRoads && roadsData && <RoadsLayer data={roadsData} />}
+              {showVilles && poi.villes && <PoiLayer data={poi.villes} kind="villes" />}
+              {showMarches && poi.marches && <PoiLayer data={poi.marches} kind="marches" />}
+              {showEau && poi.eau && <PoiLayer data={poi.eau} kind="eau" />}
               {markerLayer}
               {Object.entries(BUREAUX).map(([b, c]) => (
                 <CircleMarker key={b} center={c} radius={7} pathOptions={{ color: "#0c1b33", weight: 2, fillColor: "#ffd166", fillOpacity: 1 }}>
@@ -839,6 +890,13 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             <input type="range" min={5} max={150} step={5} value={radius} onChange={(e) => { setRadius(Number(e.target.value)); setRadiusOn(true); setRadiusTouched(true); }} />
             <label className="toggle" style={{ display: "flex", gap: 7 }}><input type="checkbox" checked={radiusOn} onChange={(e) => { setRadiusOn(e.target.checked); if (e.target.checked) setRadiusTouched(true); }} /> Tracer le rayon sur la carte</label>
             <label className="toggle" style={{ display: "flex", gap: 7, marginTop: 6 }}><input type="checkbox" checked={showRoads} onChange={(e) => setShowRoads(e.target.checked)} /> Afficher les routes principales (OSM)</label>
+            <div className="sp-poi-toggles">
+              <span className="sp-poi-title">Superposer les points OpenStreetMap</span>
+              <label className="toggle"><input type="checkbox" checked={showVilles} onChange={(e) => setShowVilles(e.target.checked)} /> <i style={{ background: "#7c8aa0" }} /> Villes <span className="muted">(269)</span></label>
+              <label className="toggle"><input type="checkbox" checked={showMarches} onChange={(e) => setShowMarches(e.target.checked)} /> <i style={{ background: "#f0821e" }} /> Marchés <span className="muted">(441)</span></label>
+              <label className="toggle"><input type="checkbox" checked={showEau} onChange={(e) => setShowEau(e.target.checked)} /> <i style={{ background: "#3d8fc0" }} /> Points d'eau <span className="muted">(≈ 3 000)</span></label>
+              {showEau && <p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>Cours d'eau (petits points clairs), plans d'eau, puits et sources. Couverture OpenStreetMap partielle pour les puits et les marchés ruraux.</p>}
+            </div>
             <label className="toggle" style={{ display: "flex", gap: 7, marginTop: 6 }}>
               <input type="checkbox" checked={showTableauCompare} onChange={(e) => setShowTableauCompare(e.target.checked)} />
               Comparer avec Tableau Public

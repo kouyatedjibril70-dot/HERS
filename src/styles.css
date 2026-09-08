@@ -267,3 +267,8 @@ main>section+section{margin-top:24px}
 .method-table tr:last-child td{border-bottom:0}
 .method-doc .callout{margin:0 0 8px}
 .method-foot{margin-top:26px;padding-top:14px;border-top:1px solid #eef1f5;font-size:12.5px;color:#94a3b8}
+.sp-poi-toggles{margin-top:6px;padding:9px 11px;border:1px solid #dfe6ef;border-radius:9px;background:#fbfdff;display:flex;flex-direction:column;gap:6px}
+.sp-poi-title{font-size:10px;font-weight:700;color:#5a6b82;text-transform:uppercase;letter-spacing:.04em}
+.sp-poi-toggles .toggle{border:0;background:none;padding:0;font-size:11px}
+.sp-poi-toggles .toggle i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.sp-poi-toggles .muted{font-size:10px}
