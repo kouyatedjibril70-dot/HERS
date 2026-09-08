@@ -281,3 +281,5 @@ main>section+section{margin-top:24px}
 .lecture-txt{font-size:12px;line-height:1.6;color:#334155;margin:8px 0 6px}
 .grid2-main{display:flex;flex-direction:column;gap:16px;min-width:0}
 .grid2-main .lecture-card{border-radius:18px}
+.lecture-card .lecture-txt+.lecture-txt{margin-top:8px}
+.lecture-sub{color:#64748b;font-size:11.5px}
