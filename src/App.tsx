@@ -24,7 +24,7 @@ function CountUp({value,dur=650}:{value:number;dur?:number}){
  return <>{n.toLocaleString("fr-FR")}</>;
 }
 // Rang percentile d'une valeur DANS UN TABLEAU DÉJÀ TRIÉ (recherche binaire).
-// scoreAll appelle ceci une fois par ligne et par critère (≈5 × 1373 fois) : trier le tableau
+// scoreAll appelle ceci une fois par ligne et par critère (≈5 × 1372 fois) : trier le tableau
 // à chaque appel (ancienne version) coûtait O(n² log n) et faisait "caler" l'appli à chaque
 // glissement de curseur de pondération. Trier une fois par critère, puis chercher, est en O(n log n).
 function rankOf(sorted:number[],value:number,higher=true){
