@@ -279,3 +279,5 @@ main>section+section{margin-top:24px}
 .lecture-card{padding:14px 16px}
 .lecture-card .card-title{margin-bottom:6px}
 .lecture-txt{font-size:12px;line-height:1.6;color:#334155;margin:8px 0 6px}
+.grid2-main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.grid2-main .lecture-card{border-radius:18px}
