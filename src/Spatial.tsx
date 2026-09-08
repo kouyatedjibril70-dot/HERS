@@ -10,20 +10,14 @@ import { withPrcc, PRCC_TOOLTIP } from "./Prcc";
 // (sous-dossier). Permet de garder les mêmes chemins quel que soit l'hébergement.
 const DATA_BASE = `${import.meta.env.BASE_URL}data/`;
 
-// ---- Contexte spatial (indice de potentiel) — 100 % données mesurées ----
+// ---- Contexte spatial (indice de potentiel) — uniquement des indicateurs mesurés/calculés ----
+// « Accès marché » et « Proximité eau » ont été retirés : dans la chaîne de données actuelle ce
+// ne sont pas des mesures fiables (confirmé par l'auteur de la préparation des données).
 
 // Potentiel agricole : donnée RÉELLE (ESA WorldCover, % terres cultivées dans un rayon de 5 km)
 export function agriScore(r: Community): number {
   const v = Number(r["pct_cultures_5km"]);
   return Number.isFinite(v) ? v : 50; // 50 = neutre si absent pour une communauté
-}
-// Marché / eau : distances OSM RÉELLES (dist_marche_osm_km / dist_eau_osm_km), converties en note sur 100.
-// 0 km -> 100 ; au-delà du seuil (25 km pour le marché, 30 km pour l'eau) -> 0.
-export function spatialScore(r: Community, key: "marche" | "eau"): number {
-  const d = Number(r[key === "marche" ? "dist_marche_osm_km" : "dist_eau_osm_km"]);
-  if (!Number.isFinite(d)) return 50;
-  const seuil = key === "marche" ? 25 : 30;
-  return Math.max(0, 100 - (d / seuil) * 100);
 }
 export function accessScore(r: Community): number {
   const d = Number(r["Distance bureau (km)"]);
@@ -41,7 +35,8 @@ export function concScore(r: Community): number {
   return Number.isFinite(n) ? Math.min(100, (n / 100) * 100) : 50;
 }
 export function indiceSpatial(r: Community): number {
-  return 0.25 * accessScore(r) + 0.30 * agriScore(r) + 0.20 * spatialScore(r, "marche") + 0.15 * spatialScore(r, "eau") + 0.10 * concScore(r);
+  // Poids re-normalisés après retrait de marché (0,20) et eau (0,15) : 0,65 -> 1.
+  return 0.40 * accessScore(r) + 0.45 * agriScore(r) + 0.15 * concScore(r);
 }
 
 // Coordonnées des bureaux — calées sur le champ « Distance bureau (km) » de la base

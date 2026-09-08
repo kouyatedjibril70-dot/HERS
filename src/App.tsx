@@ -5,7 +5,7 @@ import communities from "./data/communities.json";
 // Identifiant stable, indépendant du rang/score (le rang change à chaque pondération — s'en servir
 // comme clé React forçait Leaflet à détruire/recréer ~1300 marqueurs à chaque glissement de curseur).
 const communitiesIndexed = (communities as any[]).map((r, i) => ({ ...r, _srcId: `row#${i}` }));
-import Spatial, { accessScore, agriScore, spatialScore, indiceSpatial, roadAccessScore, BASEMAPS } from "./Spatial";
+import Spatial, { accessScore, agriScore, indiceSpatial, roadAccessScore, BASEMAPS } from "./Spatial";
 import { LANG_COLORS, ZONE_COLORS } from "./palette";
 import { withPrcc } from "./Prcc";
 import Method from "./Method";
@@ -212,9 +212,9 @@ export default function App(){
  </main>
  {toast&&<div className="toast" role="status">Score recalculé ✓</div>}
  {drawer&&<div className="drawer-backdrop" onClick={()=>setDrawer(null)}><aside className="drawer" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setDrawer(null)}><X/></button><span className="rank">RANG #{drawer.rank}</span><h2>{drawer.Communauté}</h2><div className="score-big">{drawer.score.toFixed(1)}<small>/100</small></div><div className={drawer.selected?"status":"status off"}>{drawer.selected?"Sélectionnée pour consultation":"Hors sélection"}</div><div className="details">{[["Pays",drawer.Pays],["Région",drawer.Région],["Commune",drawer.Commune],["Langue",drawer["Langue normalisée"]],["PRCC",`${drawer["Année Début PRCC"]} → ${drawer["Année Fin PRCC"]}`],["Bureau",drawer.Bureau],["Distance",`${Number(drawer["Distance bureau (km)"]).toFixed(1)} km`],["Population",drawer.POPULATION?Number(drawer.POPULATION).toLocaleString("fr-FR"):"Non disponible"],["Coordonnées",`${Number(drawer["Latitude référence"]).toFixed(5)}, ${Number(drawer["Longitude référence"]).toFixed(5)}`]].map(x=><div key={x[0]}><span>{withPrcc(x[0])}</span><b>{x[1]}</b></div>)}</div><h3>Détail du score</h3>{Object.entries({pop:"Population",dist:"Distance",dens:"Densité",recent:"Récence PRCC"}).map(([k,l])=><div className="score-row" key={k}><span>{withPrcc(l)}</span><b>{drawer.scores[k]===null?"—":`${drawer.scores[k]!.toFixed(1)} pts`}</b></div>)}<div className="coverage">Score calculé sur <b>{drawer.coverage}%</b> des critères disponibles pour cette communauté — les données manquantes ne pénalisent pas le classement.</div>
-<div className="callout" style={{marginTop:12}}><b>Contexte spatial</b><span>Indicateurs mesurés — accessibilité (distance au bureau), potentiel agricole (satellite), accès route / marché / eau (OpenStreetMap). N'entrent pas dans le score de sélection.</span></div>
+<div className="callout" style={{marginTop:12}}><b>Contexte spatial</b><span>Indicateurs mesurés — accessibilité (distance au bureau), potentiel agricole (satellite), accès route (OpenStreetMap). N'entrent pas dans le score de sélection.</span></div>
 <h3>Contexte spatial</h3>
-{([["Accessibilité",accessScore(drawer),"mesuré"],["Accès route",roadAccessScore(drawer),"mesuré"],["Potentiel agricole (5 km)",agriScore(drawer),"mesuré"],["Accès marché",spatialScore(drawer,"marche"),"mesuré"],["Proximité eau",spatialScore(drawer,"eau"),"mesuré"]] as [string,number,string][]).map(([label,val,src])=><div className="score-row" key={label}><span>{label} <em style={{fontSize:11,opacity:.6}}>({src})</em></span><b>{val.toFixed(0)}/100</b></div>)}
+{([["Accessibilité",accessScore(drawer)],["Accès route",roadAccessScore(drawer)],["Potentiel agricole (5 km)",agriScore(drawer)]] as [string,number][]).map(([label,val])=><div className="score-row" key={label}><span>{label}</span><b>{val.toFixed(0)}/100</b></div>)}
 <div className="coverage">Indice de potentiel spatial : <b>{indiceSpatial(drawer).toFixed(0)}/100</b><br/><small>{indiceSpatial(drawer)>=60?"Potentiel élevé":indiceSpatial(drawer)>=40?"Potentiel moyen":"Potentiel limité"}</small></div></aside></div>}
  </div>
 }
