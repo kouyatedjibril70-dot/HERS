@@ -308,12 +308,17 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
 
   if (mode === "langue") {
     const parLangue: Record<string, number> = {};
-    rows.forEach((r) => { const l = r["Langue normalisée"] || "—"; parLangue[l] = (parLangue[l] || 0) + 1; });
-    const top = Object.entries(parLangue).sort((a, b) => b[1] - a[1])[0];
+    rows.forEach((r) => { const l = String(r["Langue normalisée"] || "").trim(); if (l) parLangue[l] = (parLangue[l] || 0) + 1; });
+    const langs = Object.entries(parLangue).sort((a, b) => b[1] - a[1]);
+    const nb = langs.length;
+    const lecture = "La langue n'est pas un critère de sélection. Cette carte montre seulement la répartition des langues dans les communautés affichées, et non leur représentation dans la sélection.";
+    const retenir = "Cette information est utile pour préparer les équipes d'animation et de formation selon les langues présentes. Pour comparer la répartition linguistique de la sélection avec celle de la base, voir « Profil de la sélection ».";
+    if (nb === 0) return { observation: "Aucune information linguistique disponible dans la vue actuelle.", lecture, retenir };
+    const [topNom, topCount] = langs[0];
     return {
-      observation: `${Object.keys(parLangue).length} langues sont représentées parmi les ${n} communautés affichées. ${top[0]} est la langue la plus représentée, avec ${cpt(top[1], n)}.`,
-      lecture: "Cette répartition décrit la composition linguistique des communautés affichées. La langue n'entre pas dans le calcul du score et ne détermine donc pas directement la sélection.",
-      retenir: "Information surtout utile pour anticiper les besoins linguistiques des équipes (animation, supervision) et vérifier que la sélection reste suffisamment représentative des différentes communautés linguistiques. Les écarts entre la composition de la base et celle de la sélection sont détaillés dans « Profil de la sélection » (tableau de représentation linguistique).",
+      observation: `${nb} langue${nb > 1 ? "s apparaissent" : " apparaît"} parmi les ${n} communautés affichées. ${topNom} est la plus fréquente : ${cpt(topCount, n)}.`,
+      lecture,
+      retenir,
     };
   }
 
