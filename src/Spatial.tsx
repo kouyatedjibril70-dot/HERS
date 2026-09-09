@@ -369,14 +369,22 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
   }
 
   if (mode === "agri") {
-    const fort = rows.filter((r) => Number(r["pct_cultures_5km"]) >= 30).length;
-    const partFort = pct(fort, n);
+    // Dénominateur = uniquement les communautés qui ont la donnée (sinon une valeur manquante
+    // retombe silencieusement dans « < 15 % » et fausse les parts).
+    const avecPct = rows.filter((r) => Number.isFinite(Number(r["pct_cultures_5km"])));
+    const m = avecPct.length;
+    const retenir = "Cet indicateur n'entre pas dans le score de sélection. Il sert à mieux comprendre le contexte territorial et peut aider à repérer des zones intéressantes pour de futures activités ou des sites de démonstration.";
+    const lecture = "La présence de terres cultivées autour des communautés varie d'un territoire à l'autre. Cette carte permet d'identifier les zones où l'activité agricole est déjà davantage présente à proximité. Il s'agit d'un indicateur de contexte territorial, et non d'une mesure complète du potentiel agricole : d'autres facteurs comme les sols, l'eau ou l'accès au marché peuvent également intervenir.";
+    if (m === 0) return { observation: "Aucune donnée de terres cultivées disponible dans la vue actuelle.", lecture, retenir };
+    const v = (r: Community) => Number(r["pct_cultures_5km"]);
+    const bas = avecPct.filter((r) => v(r) < 15).length;
+    const moyen = avecPct.filter((r) => v(r) >= 15 && v(r) < 30).length;
+    const fort = avecPct.filter((r) => v(r) >= 30).length;
+    const sansDonnee = n - m;
     return {
-      observation: `Sur ${n} communautés affichées, ${cpt(fort, n)} ont plus de 30 % de terres cultivées dans un rayon de 5 km (donnée satellite).`,
-      lecture: partFort >= 50
-        ? `La majorité de ce sous-ensemble (${cpt(fort, n)}) a un potentiel agricole élevé à proximité — un profil favorable pour les activités horticoles visées par le programme HERS, indépendamment du score de sélection.`
-        : `Seule une minorité de ce sous-ensemble (${cpt(fort, n)}) a un potentiel agricole élevé à proximité — ce profil territorial varie fortement d'une communauté à l'autre dans ce groupe.`,
-      retenir: "Ce critère n'entre pas dans le score de sélection actuel — il sert à qualifier le profil territorial des communautés, notamment pour le choix de futurs sites de démonstration.",
+      observation: `Parmi les communautés affichées disposant de la donnée : ${cpt(bas, m)} ont moins de 15 % de terres cultivées dans un rayon de 5 km, ${cpt(moyen, m)} entre 15 et 30 %, et ${cpt(fort, m)} au moins 30 % (données satellitaires).${sansDonnee > 0 ? ` ${sansDonnee} communauté${sansDonnee > 1 ? "s ne disposent" : " ne dispose"} pas de cette donnée.` : ""}`,
+      lecture,
+      retenir,
     };
   }
 
