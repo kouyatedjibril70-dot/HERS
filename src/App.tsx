@@ -55,32 +55,40 @@ function writeUrlState(s:{tab:Tab;country:string;region:string;lang:string;burea
  window.history.replaceState(null,"",window.location.pathname+(qs?"?"+qs:"")+window.location.hash);
 }
 
-// Lecture en clair de la sélection courante — recalculée sur l'ensemble VISIBLE (filtres + pondération).
-// Renvoie 3 paragraphes ; leur formulation s'adapte à la part réelle de communautés éloignées.
+// Lecture générale de la sélection, sur l'ensemble VISIBLE (filtres + pondération).
+// 3 niveaux : (1) situation, (2) logique de sélection (texte fixe), (3) premier point d'attention (adaptatif).
 function lectureSelection(rows:Community[]):{paras:string[]}|null{
  const sel=rows.filter(r=>r.selected);
  if(!sel.length)return null;
  const n=rows.length;
  const taux=sel.length/n*100;
- const dists=sel.map(r=>Number(r["Distance bureau (km)"])).filter(Number.isFinite);
- const distMoy=dists.length?dists.reduce((a,b)=>a+b,0)/dists.length:0;
  const eloignees=sel.filter(r=>Number(r["Distance bureau (km)"])>100).length;
  const part=sel.length?eloignees/sel.length*100:0;
+
+ // 1 — Situation : ampleur de la sélection. (Ne bouge pas avec la pondération : les quotas sont fixes.)
  const p0=taux>=99.5
-  ?`La vue est filtrée sur les seules communautés retenues (**${sel.length}**). Leur distance moyenne à un bureau de coordination est de **${distMoy.toFixed(0)} km**.`
-  :`**${sel.length} communautés** sont retenues dans la vue courante, soit **${taux.toFixed(0)} %** des **${n.toLocaleString("fr-FR")}** communautés affichées. Leur distance moyenne à un bureau de coordination est de **${distMoy.toFixed(0)} km**.`;
- const p1=part<10
-  ?`Seules **${eloignees}** communautés retenues (**${part.toFixed(0)} %**) sont à plus de **100 km** d'un bureau. Elles y figurent en raison de leur rang dans le classement de leur pays, établi séparément pour le Sénégal et la Gambie.`
-  :`**${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de **100 km** d'un bureau. Elles figurent dans la sélection en raison de leur rang dans le classement de leur pays, établi séparément pour le Sénégal et la Gambie.`;
+  ?`La vue est filtrée sur les seules communautés retenues : **${sel.length.toLocaleString("fr-FR")}**.`
+  :`**${n.toLocaleString("fr-FR")}** communautés sont affichées, dont **${sel.length.toLocaleString("fr-FR")}** retenues pour consultation (**${taux.toFixed(0)} %**). La carte distingue les deux groupes par la couleur.`;
+
+ // 2 — Logique de sélection : clé de lecture de la carte. Texte fixe.
+ const p1="Chaque communauté reçoit une note, puis les communautés sont classées **séparément pour le Sénégal et la Gambie** ; on retient les mieux classées de chaque pays, en nombre fixé par le programme. La note combine surtout la distance au bureau de coordination, la récence de la fin du PRCC et le nombre de communautés voisines. La pondération se règle à droite : elle change *quelles* communautés sont retenues, jamais *combien*.";
+
+ // 3 — Premier point d'attention : recalculé à chaque changement de pondération / filtre.
  const p2=part<10
-  ?`Pour aller plus loin (comparaison retenues / non-retenues, concentration par bureau, communautés éloignées), voir l'onglet Analyse spatiale.`
+  ?`**${eloignees.toLocaleString("fr-FR")}** communautés retenues (**${part.toFixed(0)} %**) sont à plus de **100 km** d'un bureau, un enjeu limité ici. Les points d'attention (concentration par bureau, équilibre linguistique, qualité des données) sont détaillés dans l'onglet **Analyse spatiale**.`
   :part<25
-   ?`L'enjeu opérationnel porte principalement sur ces communautés éloignées : leur concentration par bureau, leur répartition régionale et leur poids dans la charge de supervision peuvent être examinés avant la validation. L'onglet Analyse spatiale (« Communautés éloignées », « Par bureau / région » et comparaison retenues / non-retenues) permet d'approfondir ces éléments.`
-   :`Une part importante de la sélection est éloignée d'un bureau : la logistique de supervision (concentration par bureau, répartition régionale, charge de déplacement) doit être cadrée dès la planification. Voir l'onglet Analyse spatiale (« Communautés éloignées », « Par bureau / région »).`;
+   ?`Premier point d'attention : **${eloignees.toLocaleString("fr-FR")}** communautés retenues (**${part.toFixed(0)} %**) sont à plus de **100 km** d'un bureau. Ce sujet, la concentration par bureau, l'équilibre linguistique et les données encore incomplètes sont détaillés dans l'onglet **Analyse spatiale**.`
+   :`Une part importante de la sélection (**${eloignees.toLocaleString("fr-FR")}** communautés, **${part.toFixed(0)} %**) est à plus de **100 km** d'un bureau : la logistique de supervision sera à cadrer dès la planification. Ce sujet et les autres points d'attention sont détaillés dans l'onglet **Analyse spatiale**.`;
  return {paras:[p0,p1,p2]};
 }
-// Rend un texte avec **gras** en fragments React.
-function boldParts(t:string){return t.split(/\*\*(.+?)\*\*/).map((s,i)=>i%2?<b key={i}>{s}</b>:s);}
+// Rend un texte avec **gras** et *italique* en fragments React.
+function boldParts(t:string){
+ return t.split(/\*\*(.+?)\*\*/).map((seg,i)=>{
+  if(i%2) return <b key={i}>{seg}</b>;
+  const parts=seg.split(/\*(.+?)\*/);
+  return parts.length===1?seg:<span key={i}>{parts.map((s,j)=>j%2?<i key={j}>{s}</i>:s)}</span>;
+ });
+}
 function CountUp({value,dur=650}:{value:number;dur?:number}){
  const [n,setN]=useState(reduceMotion?value:0);const prev=useRef(reduceMotion?value:0);
  useEffect(()=>{const from=prev.current,to=value;prev.current=value;if(from===to||reduceMotion){setN(to);return;}
