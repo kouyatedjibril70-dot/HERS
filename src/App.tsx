@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, LayersControl, CircleMarker, ZoomControl, useMap } from "react-leaflet";
-import { Search, SlidersHorizontal, Map as MapIcon, BarChart3, Users, Globe, X, ChevronRight, RotateCcw, MapPin, ArrowUpDown, ArrowUp, ArrowDown, FileText, CheckCircle2, Percent, Navigation, AlertTriangle } from "lucide-react";
+import { Search, SlidersHorizontal, Map as MapIcon, BarChart3, Users, Globe, X, ChevronRight, RotateCcw, MapPin, ArrowUpDown, ArrowUp, ArrowDown, FileText } from "lucide-react";
 import communities from "./data/communities.json";
 // Identifiant stable, indépendant du rang/score (le rang change à chaque pondération — s'en servir
 // comme clé React forçait Leaflet à détruire/recréer ~1300 marqueurs à chaque glissement de curseur).
@@ -55,9 +55,9 @@ function writeUrlState(s:{tab:Tab;country:string;region:string;lang:string;burea
  window.history.replaceState(null,"",window.location.pathname+(qs?"?"+qs:"")+window.location.hash);
 }
 
-// Lecture de la sélection courante — recalculée sur l'ensemble VISIBLE (filtres + pondération).
-// Renvoie les chiffres clés (grille KPI) + un court résumé (formulation selon la part éloignée).
-function lectureSelection(rows:Community[]):{n:number;retenues:number;taux:number;distMoy:number;eloignees:number;part:number;resume:string}|null{
+// Lecture en clair de la sélection courante — recalculée sur l'ensemble VISIBLE (filtres + pondération).
+// Renvoie 3 paragraphes ; leur formulation s'adapte à la part réelle de communautés éloignées.
+function lectureSelection(rows:Community[]):{paras:string[]}|null{
  const sel=rows.filter(r=>r.selected);
  if(!sel.length)return null;
  const n=rows.length;
@@ -65,13 +65,19 @@ function lectureSelection(rows:Community[]):{n:number;retenues:number;taux:numbe
  const dists=sel.map(r=>Number(r["Distance bureau (km)"])).filter(Number.isFinite);
  const distMoy=dists.length?dists.reduce((a,b)=>a+b,0)/dists.length:0;
  const eloignees=sel.filter(r=>Number(r["Distance bureau (km)"])>100).length;
- const part=eloignees/sel.length*100;
- const resume=part<10
-  ?`Le classement retient les mieux placées de chaque pays. Seules **${eloignees}** sont à plus de 100 km d'un bureau — la sélection reste favorable à la supervision.`
+ const part=sel.length?eloignees/sel.length*100:0;
+ const p0=taux>=99.5
+  ?`La vue est filtrée sur les seules communautés retenues (**${sel.length}**). Leur distance moyenne à un bureau de coordination est de **${distMoy.toFixed(0)} km**.`
+  :`**${sel.length} communautés** sont retenues dans la vue courante, soit **${taux.toFixed(0)} %** des **${n.toLocaleString("fr-FR")}** communautés affichées. Leur distance moyenne à un bureau de coordination est de **${distMoy.toFixed(0)} km**.`;
+ const p1=part<10
+  ?`La proximité d'un bureau se retrouve nettement dans la sélection : seules **${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de 100 km. La contrainte d'accessibilité géographique est donc peu structurante ici.`
+  :`La proximité d'un bureau n'explique pas à elle seule la sélection : **${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de 100 km. Elles ont été retenues malgré cette contrainte d'accessibilité, du fait de leur rang — le classement étant établi séparément pour le Sénégal et la Gambie.`;
+ const p2=part<10
+  ?`Pour aller plus loin — comparaison retenues / non-retenues, concentration par bureau, communautés éloignées — voir l'onglet Analyse spatiale.`
   :part<25
-   ?`Le classement retient les mieux placées de chaque pays. **${eloignees}** communautés retenues sont à plus de 100 km d'un bureau : elles passent sur leur rang, malgré la distance. Concentration par bureau et charge de supervision à examiner dans l'onglet **Analyse spatiale**.`
-   :`Le classement retient les mieux placées de chaque pays. **${eloignees}** communautés retenues (une part importante) sont à plus de 100 km d'un bureau — la logistique de supervision doit être cadrée dès la planification. Détail dans l'onglet **Analyse spatiale**.`;
- return {n,retenues:sel.length,taux,distMoy,eloignees,part,resume};
+   ?`L'enjeu opérationnel porte surtout sur ces communautés éloignées : concentration par bureau, répartition régionale et poids dans la charge de supervision sont à examiner avant validation. L'onglet Analyse spatiale (« Communautés éloignées », « Par bureau / région », comparaison retenues / non-retenues) permet d'aller plus loin.`
+   :`Une part importante de la sélection est éloignée d'un bureau : la logistique de supervision — concentration par bureau, répartition régionale, charge de déplacement — doit être cadrée dès la planification. Voir l'onglet Analyse spatiale (« Communautés éloignées », « Par bureau / région »).`;
+ return {paras:[p0,p1,p2]};
 }
 // Rend un texte avec **gras** en fragments React.
 function boldParts(t:string){return t.split(/\*\*(.+?)\*\*/).map((s,i)=>i%2?<b key={i}>{s}</b>:s);}
@@ -263,7 +269,7 @@ export default function App(){
  {tab!=="spatial"&&<><select value={region} onChange={e=>setRegion(e.target.value)}><option>Toutes</option>{regions.map(r=><option key={r}>{r}</option>)}</select><select value={lang} onChange={e=>setLang(e.target.value)}><option>Toutes</option>{langs.map(l=><option key={l}>{l}</option>)}</select><select value={bureau} onChange={e=>setBureau(e.target.value)}><option value="Tous">Tous les bureaux</option>{["Kolda","Thiès","Tambacounda","Ourossogui","Basse"].map(b=><option key={b}>{b}</option>)}</select></>}
  <button className="ghost reset-r" title="Réinitialiser les filtres" onClick={()=>{setCountry("Tous");setRegion("Toutes");setLang("Toutes");setBureau("Tous");setQuery("");setOnly(false);setShowSel(true);setShowUnsel(true)}}><RotateCcw size={16}/></button></div>
  </>}
- {tab==="method"?<Method onGoDashboard={()=>{setTab("dashboard");window.scrollTo({top:0,behavior:"smooth"})}}/>:tab==="spatial"?<Spatial all={data} rows={filtered} onSelect={setDrawer} onBureau={b=>{setBureau(b);setTab("communities");window.scrollTo({top:0,behavior:"smooth"})}}/>:tab==="dashboard"?<section className="grid2"><div className="grid2-main"><div className="map-card"><div className="card-head"><div><h2><MapPin size={15}/> Carte des communautés</h2><div className="head-meta"><span className="cnt-badge">{mapRows.length} visibles</span><span className="status-live"><i/>Données à jour</span></div></div></div><div className="map-wrap"><MapContainer center={center} zoom={6} scrollWheelZoom zoomControl={false}><ZoomControl position="topright"/><Recenter center={center}/><LayersControl position="topright">{BASEMAPS.map((b,i)=><LayersControl.BaseLayer key={b.name} name={b.name} checked={i===0}><TileLayer url={b.url} attribution={b.attribution} subdomains={b.subdomains??"abc"} maxNativeZoom={b.maxNativeZoom}/></LayersControl.BaseLayer>)}</LayersControl>{mapRows.filter(r=>Number.isFinite(Number(r["Latitude référence"]))).map(r=>{const zc=r.selected?ZONE_COLORS.selection:ZONE_COLORS.Sénégal;return <CircleMarker key={r._id} center={[Number(r["Latitude référence"]),Number(r["Longitude référence"])]} radius={r.selected?6:3.5} pathOptions={{color:zc,fillColor:zc,weight:r.selected?1.5:1,fillOpacity:r.selected?.9:.4,className:r.selected?"pmk":""}} eventHandlers={{click:()=>setDrawer(r)}}/>;})}</MapContainer><div className="map-legend"><button type="button" className={showSel?"":"off"} onClick={()=>setShowSel(v=>!v)}><i style={{background:ZONE_COLORS.selection}}/>Sélectionnée</button><button type="button" className={showUnsel?"":"off"} onClick={()=>setShowUnsel(v=>!v)}><i style={{background:ZONE_COLORS.Sénégal}}/>Non sélectionnée</button></div></div></div>{(()=>{const l=lectureSelection(filtered);return <div className="side-card lecture-card"><div className="card-title"><FileText size={16}/> Lecture de la sélection</div>{l?<><div className="lecture-kpis"><div className="lk"><CheckCircle2 size={15}/><b>{l.retenues.toLocaleString("fr-FR")}</b><span>communautés retenues</span></div><div className="lk"><Percent size={15}/><b>{l.taux.toFixed(0)} %</b><span>de la base affichée</span></div><div className="lk"><Navigation size={15}/><b>{l.distMoy.toFixed(0)} km</b><span>distance moyenne au bureau</span></div><div className={"lk"+(l.part>=10?" warn":"")}><AlertTriangle size={15}/><b>{l.eloignees.toLocaleString("fr-FR")}</b><span>à plus de 100 km d'un bureau</span></div></div><p className="lecture-txt">{boldParts(l.resume)}</p></>:<p className="muted">Aucune communauté retenue dans la vue actuelle — ajustez les filtres.</p>}</div>;})()}</div>
+ {tab==="method"?<Method onGoDashboard={()=>{setTab("dashboard");window.scrollTo({top:0,behavior:"smooth"})}}/>:tab==="spatial"?<Spatial all={data} rows={filtered} onSelect={setDrawer} onBureau={b=>{setBureau(b);setTab("communities");window.scrollTo({top:0,behavior:"smooth"})}}/>:tab==="dashboard"?<section className="grid2"><div className="grid2-main"><div className="map-card"><div className="card-head"><div><h2><MapPin size={15}/> Carte des communautés</h2><div className="head-meta"><span className="cnt-badge">{mapRows.length} visibles</span><span className="status-live"><i/>Données à jour</span></div></div></div><div className="map-wrap"><MapContainer center={center} zoom={6} scrollWheelZoom zoomControl={false}><ZoomControl position="topright"/><Recenter center={center}/><LayersControl position="topright">{BASEMAPS.map((b,i)=><LayersControl.BaseLayer key={b.name} name={b.name} checked={i===0}><TileLayer url={b.url} attribution={b.attribution} subdomains={b.subdomains??"abc"} maxNativeZoom={b.maxNativeZoom}/></LayersControl.BaseLayer>)}</LayersControl>{mapRows.filter(r=>Number.isFinite(Number(r["Latitude référence"]))).map(r=>{const zc=r.selected?ZONE_COLORS.selection:ZONE_COLORS.Sénégal;return <CircleMarker key={r._id} center={[Number(r["Latitude référence"]),Number(r["Longitude référence"])]} radius={r.selected?6:3.5} pathOptions={{color:zc,fillColor:zc,weight:r.selected?1.5:1,fillOpacity:r.selected?.9:.4,className:r.selected?"pmk":""}} eventHandlers={{click:()=>setDrawer(r)}}/>;})}</MapContainer><div className="map-legend"><button type="button" className={showSel?"":"off"} onClick={()=>setShowSel(v=>!v)}><i style={{background:ZONE_COLORS.selection}}/>Sélectionnée</button><button type="button" className={showUnsel?"":"off"} onClick={()=>setShowUnsel(v=>!v)}><i style={{background:ZONE_COLORS.Sénégal}}/>Non sélectionnée</button></div></div></div>{(()=>{const l=lectureSelection(filtered);return <div className="side-card lecture-card"><div className="card-title"><FileText size={16}/> Lecture de la sélection</div>{l?l.paras.map((p,i)=><p key={i} className={i===2?"lecture-txt lecture-sub":"lecture-txt"}>{boldParts(p)}</p>):<p className="muted">Aucune communauté retenue dans la vue actuelle — ajustez les filtres.</p>}</div>;})()}</div>
  <div className="rail">
  <div className="hint-panel"><MapPin size={20}/><div><b>Explorer la carte</b><span>Cliquez sur une communauté pour afficher son profil détaillé.</span></div></div>
  <LangsPanel data={data}/>
