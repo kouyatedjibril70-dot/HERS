@@ -89,16 +89,16 @@ function colorFor(r: Community, mode: Mode): string {
 }
 function legendFor(mode: Mode, langs: string[]): { c: string; l: string }[] {
   if (mode === "statut") return [{ c: "#176bd1", l: "Sélectionnée" }, { c: "#9aabbe", l: "Hors sélection" }];
-  if (mode === "score") return [{ c: "#c3d4e6", l: "< 40" }, { c: "#7ba7d4", l: "40 – 55" }, { c: "#3d7ec0", l: "55 – 70" }, { c: "#1c4a86", l: "≥ 70" }];
+  if (mode === "score") return [{ c: "#c3d4e6", l: "moins de 40" }, { c: "#7ba7d4", l: "40 à 55" }, { c: "#3d7ec0", l: "55 à 70" }, { c: "#1c4a86", l: "70 et plus" }];
   if (mode === "langue") return langs.map((l) => ({ c: LANG_COLORS[l] || "#9aabbe", l }));
-  if (mode === "distance") return [{ c: "#2f9e6f", l: "≤ 25 km" }, { c: "#7bbf4f", l: "25 – 50" }, { c: "#e8a13a", l: "50 – 100" }, { c: "#d64550", l: "> 100" }];
-  if (mode === "prcc") return [{ c: "#c3d4e6", l: "≤ 2013" }, { c: "#7ba7d4", l: "2014 – 2018" }, { c: "#3d7ec0", l: "2019 – 2023" }, { c: "#1c4a86", l: "≥ 2024" }];
-  if (mode === "agri") return [{ c: "#c3d4e6", l: "< 15 %" }, { c: "#7ba7d4", l: "15 – 30 %" }, { c: "#3d7ec0", l: "30 – 50 %" }, { c: "#1c4a86", l: "≥ 50 %" }];
+  if (mode === "distance") return [{ c: "#2f9e6f", l: "25 km ou moins" }, { c: "#7bbf4f", l: "25 à 50" }, { c: "#e8a13a", l: "50 à 100" }, { c: "#d64550", l: "plus de 100" }];
+  if (mode === "prcc") return [{ c: "#c3d4e6", l: "2013 ou avant" }, { c: "#7ba7d4", l: "2014 à 2018" }, { c: "#3d7ec0", l: "2019 à 2023" }, { c: "#1c4a86", l: "2024 ou après" }];
+  if (mode === "agri") return [{ c: "#c3d4e6", l: "moins de 15 %" }, { c: "#7ba7d4", l: "15 à 30 %" }, { c: "#3d7ec0", l: "30 à 50 %" }, { c: "#1c4a86", l: "50 % et plus" }];
   if (mode === "route") return [{ c: "#c3d4e6", l: "éloignée" }, { c: "#7ba7d4", l: "proche" }, { c: "#3d7ec0", l: "très proche" }, { c: "#1c4a86", l: "sur la route" }];
-  if (mode === "marche") return [{ c: "#2f9e6f", l: "≤ 10 km" }, { c: "#7bbf4f", l: "10 – 25" }, { c: "#e8a13a", l: "25 – 50" }, { c: "#d64550", l: "> 50" }];
-  if (mode === "eau") return [{ c: "#2f9e6f", l: "≤ 2 km" }, { c: "#7bbf4f", l: "2 – 10" }, { c: "#e8a13a", l: "10 – 25" }, { c: "#d64550", l: "> 25" }];
-  if (mode === "ville") return [{ c: "#2f9e6f", l: "≤ 5 km" }, { c: "#7bbf4f", l: "5 – 15" }, { c: "#e8a13a", l: "15 – 30" }, { c: "#d64550", l: "> 30" }];
-  return [{ c: "#c3d4e6", l: "< 1 000" }, { c: "#7ba7d4", l: "1 000 – 3 000" }, { c: "#3d7ec0", l: "3 000 – 8 000" }, { c: "#1c4a86", l: "> 8 000" }, { c: "#d7dee7", l: "n/d" }];
+  if (mode === "marche") return [{ c: "#2f9e6f", l: "10 km ou moins" }, { c: "#7bbf4f", l: "10 à 25" }, { c: "#e8a13a", l: "25 à 50" }, { c: "#d64550", l: "plus de 50" }];
+  if (mode === "eau") return [{ c: "#2f9e6f", l: "2 km ou moins" }, { c: "#7bbf4f", l: "2 à 10" }, { c: "#e8a13a", l: "10 à 25" }, { c: "#d64550", l: "plus de 25" }];
+  if (mode === "ville") return [{ c: "#2f9e6f", l: "5 km ou moins" }, { c: "#7bbf4f", l: "5 à 15" }, { c: "#e8a13a", l: "15 à 30" }, { c: "#d64550", l: "plus de 30" }];
+  return [{ c: "#c3d4e6", l: "moins de 1 000" }, { c: "#7ba7d4", l: "1 000 à 3 000" }, { c: "#3d7ec0", l: "3 000 à 8 000" }, { c: "#1c4a86", l: "plus de 8 000" }, { c: "#d7dee7", l: "non renseignée" }];
 }
 
 // À quel bucket de légende appartient une communauté, pour un mode donné — sert à filtrer la carte
@@ -298,7 +298,7 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     const basSel = rows.filter((r) => r.score < 40 && r.selected).length;
     const sV = basSel > 1 ? "s" : "";
     return {
-      observation: `Sur ${n} communautés affichées, ${cpt(haut, n)} ont un score ≥ 70, ${cpt(moyen, n)} entre 40 et 70, et ${cpt(bas, n)} un score inférieur à 40.`,
+      observation: `Sur ${n} communautés affichées, ${cpt(haut, n)} ont un score d'au moins 70, ${cpt(moyen, n)} entre 40 et 70, et ${cpt(bas, n)} un score inférieur à 40.`,
       lecture: basSel > 0
         ? `${basSel} communauté${sV} retenue${sV} ${basSel > 1 ? "ont" : "a"} un score inférieur à 40. Ce n'est pas une anomalie : le classement se fait séparément pour le Sénégal et la Gambie, avec un nombre de places fixé par pays. Une communauté à score modéré est donc retenue si elle fait partie des mieux classées de son pays. Pour savoir ce qui la fait entrer, ouvrir sa fiche : on y voit son rang et le détail de son score.`
         : "Aucune communauté à score inférieur à 40 n'est retenue dans ce sous-ensemble — le score et la sélection concordent ici.",
@@ -755,7 +755,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
         <div className="stat"><span>Langues</span><strong>{langList.length}</strong><small>normalisées</small></div>
         <div className="stat"><span>Distance moyenne</span><strong>{gS.dist.toFixed(0)} km</strong><small>communautés retenues</small></div>
         {(() => { const k = sel.filter((r) => num(r, "Distance bureau (km)") > 100).length; return (
-          <div className="stat"><span>Retenues &gt; 100 km</span><strong>{k}</strong><small>éloignées d'un bureau ({pct(k, sel.length).toFixed(0)} % de la sélection)</small></div>
+          <div className="stat"><span>Retenues à plus de 100 km</span><strong>{k}</strong><small>éloignées d'un bureau ({pct(k, sel.length).toFixed(0)} % de la sélection)</small></div>
         ); })()}
       </div>
 
@@ -897,7 +897,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
               }
 
               return (
-                <Analyse title={<>Analyse — communautés éloignées (&gt; {farThresh} km)</>}>
+                <Analyse title={<>Analyse — communautés éloignées (plus de {farThresh} km)</>}>
                   <p className="muted" style={{ margin: "0 0 8px", fontSize: 12 }}>Porte sur les 803 communautés retenues, tous bureaux et pays confondus — indépendant du bureau choisi ci-dessus dans « Distance autour d'un bureau ».</p>
                   <p><b>Observation :</b> {far.length} communautés retenues ({partSel.toFixed(1)} % de la sélection) se situent à plus de {farThresh} km de leur bureau de coordination.</p>
                   <p><b>Ce que ça veut dire :</b> {partSel < 15
@@ -1216,7 +1216,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             { l: "Coordonnées présentes", n: all.length, d: all.length, c: "#2f9e6f" },
             { l: "Position jugée fiable", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée") || r["Méthode localisation"]?.startsWith("Position restaurée")).length, d: all.length, c: "#2f9e6f" },
             { l: "Dont position au niveau du village précis (sous-ensemble le plus strict)", n: all.filter((r) => r["Méthode localisation"]?.startsWith("Localité vérifiée")).length, d: all.length, c: "#2f9e6f" },
-            { l: "PRCC terminé ≥ 2009 (critère officiel)", n: all.filter((r) => Number(r["Année Fin PRCC"]) >= 2009).length, d: all.length, c: "#2f9e6f" },
+            { l: "PRCC terminé en 2009 ou après (critère officiel)", n: all.filter((r) => Number(r["Année Fin PRCC"]) >= 2009).length, d: all.length, c: "#2f9e6f" },
             { l: "Code communauté", n: codeKnown, d: all.length, c: "#e8a13a" },
           ].map((q) => (
             <div className="q-row" key={q.l}>
