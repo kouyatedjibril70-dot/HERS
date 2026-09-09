@@ -51,6 +51,8 @@ const BUREAUX: Record<string, [number, number]> = {
 const num = (r: Community, k: string) => Number(r[k]);
 const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
 const pct = (n: number, d: number) => (d ? (n / d) * 100 : 0);
+// « X communautés (Y %) » — les analyses annoncent le nombre d'abord, le pourcentage entre parenthèses.
+const cpt = (k: number, total: number) => `${k} communauté${k > 1 ? "s" : ""} (${pct(k, total).toFixed(0)} %)`;
 const keyOf = (r: Community) => String(r._id ?? r["code communaute"] ?? r.Communauté);
 
 // Dispersion déterministe : les points sont des centres de commune, donc empilés.
@@ -294,9 +296,9 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     const bas = rows.filter((r) => r.score < 40).length;
     const basSel = rows.filter((r) => r.score < 40 && r.selected).length;
     return {
-      observation: `${pct(haut, n).toFixed(0)} % des communautés affichées ont un score ≥ 70, et ${pct(bas, n).toFixed(0)} % ont un score < 40.`,
+      observation: `Sur ${n} communautés affichées, ${cpt(haut, n)} ont un score ≥ 70 et ${cpt(bas, n)} un score < 40.`,
       lecture: basSel > 0
-        ? `${basSel} communauté(s) à score relativement faible (< 40) sont malgré tout sélectionnées. Cela s'explique par le classement séparé par pays : une communauté est retenue si elle fait partie des mieux classées de son pays, pas selon un seuil de score absolu commun.`
+        ? `${basSel} communauté${basSel > 1 ? "s" : ""} à score relativement faible (< 40) ${basSel > 1 ? "sont" : "est"} malgré tout sélectionnée${basSel > 1 ? "s" : ""}. Cela s'explique par le classement séparé par pays : une communauté est retenue si elle fait partie des mieux classées de son pays, pas selon un seuil de score absolu commun.`
         : "Aucune communauté à score faible n'est sélectionnée dans ce sous-ensemble — le score absolu et le statut de sélection sont ici cohérents.",
       retenir: "Le score sert à classer les communautés entre elles, pas à fixer une note absolue de qualité — deux communautés de pays différents avec le même score peuvent avoir un statut différent.",
     };
@@ -307,7 +309,7 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     rows.forEach((r) => { const l = r["Langue normalisée"] || "—"; parLangue[l] = (parLangue[l] || 0) + 1; });
     const top = Object.entries(parLangue).sort((a, b) => b[1] - a[1])[0];
     return {
-      observation: `${Object.keys(parLangue).length} langue(s) représentée(s) parmi les communautés affichées. La plus fréquente est ${top[0]} (${pct(top[1], n).toFixed(0)} %).`,
+      observation: `${Object.keys(parLangue).length} langue(s) représentée(s) parmi les ${n} communautés affichées. La plus fréquente est ${top[0]} : ${cpt(top[1], n)}.`,
       lecture: "Cette répartition reflète la composition linguistique du sous-ensemble affiché, sans lien avec le score — la langue n'est pas un critère de sélection.",
       retenir: "Utile pour anticiper les besoins de couverture linguistique des équipes d'animation dans cette zone, pas pour évaluer la qualité de la sélection.",
     };
@@ -317,9 +319,9 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     const b1 = rows.filter((r) => num(r, "Distance bureau (km)") <= 25).length;
     const b4 = rows.filter((r) => num(r, "Distance bureau (km)") > 100).length;
     return {
-      observation: `${pct(b1, n).toFixed(0)} % des communautés affichées sont à moins de 25 km d'un bureau ; ${pct(b4, n).toFixed(0)} % sont à plus de 100 km.`,
+      observation: `Sur ${n} communautés affichées, ${cpt(b1, n)} sont à moins de 25 km d'un bureau et ${cpt(b4, n)} à plus de 100 km.`,
       lecture: b4 / n > 0.15
-        ? "Une part notable de ce sous-ensemble est éloignée d'un bureau — un enjeu potentiel pour la supervision et les déplacements des équipes."
+        ? `Une part notable de ce sous-ensemble (${b4} communauté${b4 > 1 ? "s" : ""}) est éloignée d'un bureau — un enjeu potentiel pour la supervision et les déplacements des équipes.`
         : "La majorité de ce sous-ensemble reste à une distance raisonnable d'un bureau, favorable à la supervision.",
       retenir: "Ces communautés éloignées ne sont pas nécessairement à écarter — voir l'outil « Communautés éloignées » pour savoir ce qui compense leur distance dans le score.",
     };
@@ -329,12 +331,12 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     const recent = rows.filter((r) => num(r, "Année Fin PRCC") >= 2019).length;
     const partRecent = pct(recent, n);
     return {
-      observation: `${partRecent.toFixed(0)} % des communautés affichées ont terminé leur PRCC en 2019 ou après.`,
+      observation: `Sur ${n} communautés affichées, ${cpt(recent, n)} ont terminé leur PRCC en 2019 ou après.`,
       // Conditionné sur la vraie proportion observée : le mode "toujours cohérent" d'origine affirmait
       // "proportion élevée" même quand elle ne l'était pas sur le sous-ensemble filtré.
       lecture: partRecent >= 50
-        ? `Une majorité de ce sous-ensemble (${partRecent.toFixed(0)} %) a un PRCC récent — cohérent avec le critère du projet qui privilégie les communautés dont les structures de gouvernance sont encore actives.`
-        : `Seule une minorité de ce sous-ensemble (${partRecent.toFixed(0)} %) a un PRCC récent — la récence est donc hétérogène ici, malgré son poids de 35 % dans le score.`,
+        ? `Une majorité de ce sous-ensemble (${cpt(recent, n)}) a un PRCC récent — cohérent avec le critère du projet qui privilégie les communautés dont les structures de gouvernance sont encore actives.`
+        : `Seule une minorité de ce sous-ensemble (${cpt(recent, n)}) a un PRCC récent — la récence est donc hétérogène ici, malgré son poids de 35 % dans le score.`,
       retenir: "La récence du PRCC pèse 35 % du score actuel — c'est l'un des critères les plus déterminants de la sélection.",
     };
   }
@@ -342,7 +344,7 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
   if (mode === "population") {
     const avecDonnee = rows.filter((r) => r.POPULATION !== null && r.POPULATION !== undefined).length;
     return {
-      observation: `${pct(avecDonnee, n).toFixed(0)} % des communautés affichées ont une donnée de population disponible.`,
+      observation: `Sur ${n} communautés affichées, ${cpt(avecDonnee, n)} ont une donnée de population disponible.`,
       lecture: avecDonnee / n < 0.7
         ? "Cette couverture incomplète est la raison pour laquelle la population n'est pas utilisée comme critère de score actuellement — l'inclure pénaliserait injustement les communautés sans donnée."
         : "La couverture est correcte sur ce sous-ensemble, mais la population reste à 0 % de pondération dans le score global pour rester cohérente sur l'ensemble de la base.",
@@ -354,10 +356,10 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     const fort = rows.filter((r) => Number(r["pct_cultures_5km"]) >= 30).length;
     const partFort = pct(fort, n);
     return {
-      observation: `${partFort.toFixed(0)} % des communautés affichées ont plus de 30 % de terres cultivées dans un rayon de 5 km (donnée satellite).`,
+      observation: `Sur ${n} communautés affichées, ${cpt(fort, n)} ont plus de 30 % de terres cultivées dans un rayon de 5 km (donnée satellite).`,
       lecture: partFort >= 50
-        ? `La majorité de ce sous-ensemble (${partFort.toFixed(0)} %) a un potentiel agricole élevé à proximité — un profil favorable pour les activités horticoles visées par le programme HERS, indépendamment du score de sélection.`
-        : `Seule une minorité de ce sous-ensemble (${partFort.toFixed(0)} %) a un potentiel agricole élevé à proximité — ce profil territorial varie fortement d'une communauté à l'autre dans ce groupe.`,
+        ? `La majorité de ce sous-ensemble (${cpt(fort, n)}) a un potentiel agricole élevé à proximité — un profil favorable pour les activités horticoles visées par le programme HERS, indépendamment du score de sélection.`
+        : `Seule une minorité de ce sous-ensemble (${cpt(fort, n)}) a un potentiel agricole élevé à proximité — ce profil territorial varie fortement d'une communauté à l'autre dans ce groupe.`,
       retenir: "Ce critère n'entre pas dans le score de sélection actuel — il sert à qualifier le profil territorial des communautés, notamment pour le choix de futurs sites de démonstration.",
     };
   }
@@ -366,10 +368,10 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     const bonAcces = rows.filter((r) => Number(r["dist_route_km"]) <= 1).length;
     const partBonAcces = pct(bonAcces, n);
     return {
-      observation: `${partBonAcces.toFixed(0)} % des communautés affichées sont à moins d'1 km d'une route praticable (carte communautaire en ligne).`,
+      observation: `Sur ${n} communautés affichées, ${cpt(bonAcces, n)} sont à moins d'1 km d'une route praticable (carte communautaire en ligne).`,
       lecture: partBonAcces >= 50
-        ? `La majorité de ce sous-ensemble (${partBonAcces.toFixed(0)} %) bénéficie d'un bon accès routier — un atout pour l'acheminement des intrants agricoles et l'accès aux marchés, pertinent pour le volet chaînes de valeur horticoles du programme.`
-        : `Seule une minorité de ce sous-ensemble (${partBonAcces.toFixed(0)} %) est à moins d'1 km d'une route — l'accès routier est donc hétérogène dans ce groupe.`,
+        ? `La majorité de ce sous-ensemble (${cpt(bonAcces, n)}) bénéficie d'un bon accès routier — un atout pour l'acheminement des intrants agricoles et l'accès aux marchés, pertinent pour le volet chaînes de valeur horticoles du programme.`
+        : `Seule une minorité de ce sous-ensemble (${cpt(bonAcces, n)}) est à moins d'1 km d'une route — l'accès routier est donc hétérogène dans ce groupe.`,
       retenir: "Comme pour le potentiel agricole, cette donnée est informative mais n'entre pas dans le score de sélection actuel.",
     };
   }
@@ -389,10 +391,10 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     const nLoin = vals.filter((v) => v > cfg.loin).length;
     const partProche = pct(nProche, vals.length);
     return {
-      observation: `Distance médiane à ${cfg.nom} : ${med.toFixed(1)} km sur les communautés affichées. ${partProche.toFixed(0)} % sont à moins de ${cfg.proche} km, ${pct(nLoin, vals.length).toFixed(0)} % à plus de ${cfg.loin} km.`,
+      observation: `Distance médiane à ${cfg.nom} : ${med.toFixed(1)} km sur ${vals.length} communautés affichées. ${cpt(nProche, vals.length)} sont à moins de ${cfg.proche} km, ${cpt(nLoin, vals.length)} à plus de ${cfg.loin} km.`,
       lecture: partProche >= 50
-        ? `La majorité de ce sous-ensemble est à faible distance de ${cfg.nom} — un contexte plutôt favorable pour ce sous-ensemble.`
-        : `Une part importante de ce sous-ensemble est éloignée de ${cfg.nom} cartographié — à vérifier localement avant toute conclusion.`,
+        ? `La majorité de ce sous-ensemble (${cpt(nProche, vals.length)}) est à faible distance de ${cfg.nom} — un contexte plutôt favorable.`
+        : `Une part importante de ce sous-ensemble (${cpt(nLoin, vals.length)}) est éloignée de ${cfg.nom} cartographié — à vérifier localement avant toute conclusion.`,
       retenir: `Indicateur de contexte, hors score de sélection. ${cfg.limite}`,
     };
   }
@@ -668,8 +670,8 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
 
   const att: { c: string; t: string }[] = [];
   const under = ling.filter((x) => x.delta < -5);
-  if (under.length) under.forEach((x) => att.push({ c: "#d64550", t: `${x.l} sous-représentée : ${x.ss.toFixed(0)} % de la sélection contre ${x.bs.toFixed(0)} % de la base (écart de ${Math.abs(x.delta).toFixed(0)} %).` }));
-  else att.push({ c: "#2f9e6f", t: "La langue n'est pas un critère de sélection — ce contrôle vérifie que les autres critères (distance, densité, récence) n'introduisent pas, par effet indirect, un déséquilibre linguistique involontaire. Résultat actuel : chaque langue garde une part quasi identique dans la sélection et dans la base (écart de 5 % ou moins pour toutes)." });
+  if (under.length) under.forEach((x) => att.push({ c: "#d64550", t: `${x.l} sous-représentée : ${x.s} communauté${x.s > 1 ? "s" : ""} retenue${x.s > 1 ? "s" : ""} (${x.ss.toFixed(0)} % de la sélection) contre ${x.b} dans la base (${x.bs.toFixed(0)} %) — écart de ${Math.abs(x.delta).toFixed(0)} points.` }));
+  else att.push({ c: "#2f9e6f", t: "La langue n'est pas un critère de sélection — ce contrôle vérifie que les autres critères (distance, densité, récence) n'introduisent pas, par effet indirect, un déséquilibre linguistique involontaire. Résultat actuel : chaque langue garde une part quasi identique dans la sélection et dans la base (écart de 5 points de pourcentage ou moins pour toutes)." });
   const farShare = pct(far.length, sel.length);
   if (farShare >= 15) att.push({ c: "#e8a13a", t: `${far.length} communautés retenues (${farShare.toFixed(0)} %) sont à plus de ${farThresh} km d'un bureau.` });
   const gambiaSel = sel.filter((r) => r.Pays === "Gambie").length;
@@ -705,7 +707,9 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
         <div className="stat"><span>Bureaux</span><strong>5</strong><small>de coordination</small></div>
         <div className="stat"><span>Langues</span><strong>{langList.length}</strong><small>normalisées</small></div>
         <div className="stat"><span>Distance moyenne</span><strong>{gS.dist.toFixed(0)} km</strong><small>communautés retenues</small></div>
-        <div className="stat"><span>Retenues &gt; 100 km</span><strong>{pct(sel.filter((r) => num(r, "Distance bureau (km)") > 100).length, sel.length).toFixed(0)} %</strong><small>éloignées d'un bureau</small></div>
+        {(() => { const k = sel.filter((r) => num(r, "Distance bureau (km)") > 100).length; return (
+          <div className="stat"><span>Retenues &gt; 100 km</span><strong>{k}</strong><small>éloignées d'un bureau ({pct(k, sel.length).toFixed(0)} % de la sélection)</small></div>
+        ); })()}
       </div>
 
       <div className="grid" id="sp-carte">
@@ -796,11 +800,11 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
 
               let interpretation: string;
               if (tauxLocal >= 85) {
-                interpretation = `À cette distance, presque toutes les communautés sont retenues (${tauxLocal.toFixed(0)} %). C'est normal et attendu : plus une communauté est proche d'un bureau, plus elle marque de points sur ce critère, qui compte pour 45 % du score total. Ce taux élevé ne signale donc pas un problème — il montre simplement que le modèle fonctionne comme prévu.`;
+                interpretation = `À cette distance, presque toutes les communautés sont retenues (${retenues.length} sur ${inRadius.length}, ${tauxLocal.toFixed(0)} %). C'est normal et attendu : plus une communauté est proche d'un bureau, plus elle marque de points sur ce critère, qui compte pour 45 % du score total. Ce taux élevé ne signale donc pas un problème — il montre simplement que le modèle fonctionne comme prévu.`;
               } else if (tauxLocal >= 50) {
-                interpretation = `Un peu plus de la moitié des communautés de cette zone sont retenues (${tauxLocal.toFixed(0)} %). La proximité ne suffit donc pas seule ici — d'autres critères (concentration de voisines, récence du PRCC) font aussi la différence.`;
+                interpretation = `${retenues.length} des ${inRadius.length} communautés de cette zone sont retenues (${tauxLocal.toFixed(0)} %). La proximité ne suffit donc pas seule ici — d'autres critères (concentration de voisines, récence du PRCC) font aussi la différence.`;
               } else {
-                interpretation = `Seulement ${tauxLocal.toFixed(0)} % des communautés de cette zone sont retenues, malgré leur proximité du bureau. Cela signifie que d'autres critères du score (concentration de voisines, récence du PRCC) pèsent plus lourd que la distance pour ces communautés précises.`;
+                interpretation = `Seulement ${retenues.length} des ${inRadius.length} communautés de cette zone sont retenues (${tauxLocal.toFixed(0)} %), malgré leur proximité du bureau. Cela signifie que d'autres critères du score (concentration de voisines, récence du PRCC) pèsent plus lourd que la distance pour ces communautés précises.`;
               }
 
               let pourquoi: string | null = null;
@@ -1017,10 +1021,10 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
           return (
             <div style={{ margin: "0 16px 16px" }}>
               <Analyse title="Analyse comparative">
-                <p><b>Observation :</b> les communautés sélectionnées ont un score moyen de {gS.score.toFixed(1)}, contre {gN.score.toFixed(1)} pour les non sélectionnées — un écart de {ecartScore.toFixed(1)} points.</p>
+                <p><b>Observation :</b> les {sel.length} communautés sélectionnées ont un score moyen de {gS.score.toFixed(1)}, contre {gN.score.toFixed(1)} pour les {nonsel.length} non sélectionnées — un écart de {ecartScore.toFixed(1)} points.</p>
                 <p><b>Ce que ça veut dire :</b> {quiExplique}{mentionNegligeable}</p>
                 <p><b>Implication :</b> le classement produit bien une sélection différenciée, cohérente avec les critères retenus (distance, concentration locale, récence du PRCC) — ce n'est pas un tirage proche du hasard.</p>
-                <p className="sp-retenir">🎯 <b>À retenir :</b> la ligne « Population moyenne » de ce tableau ne concerne que le Sénégal et seulement les communautés où cette donnée existe ({popPct.toFixed(0)} % de la base sénégalaise) — elle ne doit pas être lue comme un indicateur de poids réel dans le score, puisque la population ne compte actuellement pour rien dans le calcul du score (réglage modifiable dans l'onglet Vue d'ensemble).</p>
+                <p className="sp-retenir">🎯 <b>À retenir :</b> la ligne « Population moyenne » de ce tableau ne concerne que le Sénégal et seulement les communautés où cette donnée existe ({snPop} sur {snTot}, soit {popPct.toFixed(0)} % de la base sénégalaise) — elle ne doit pas être lue comme un indicateur de poids réel dans le score, puisque la population ne compte actuellement pour rien dans le calcul du score (réglage modifiable dans l'onglet Vue d'ensemble).</p>
               </Analyse>
             </div>
           );
@@ -1053,7 +1057,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                 const totalSelPays = sel.filter((r) => r.Pays === b.pays).length;
                 const partSelection = pct(b.s, totalSelPays);
                 const partBase = pct(b.n, totalBasePays);
-                return { ...b, partSelection, partBase, ecart: partSelection - partBase };
+                return { ...b, totalBasePays, totalSelPays, partSelection, partBase, ecart: partSelection - partBase };
               });
             if (!avecEcart.length) return null;
             const plusEcarte = avecEcart.reduce((max, x) => (Math.abs(x.ecart) > Math.abs(max.ecart) ? x : max), avecEcart[0]);
@@ -1071,7 +1075,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             return (
               <div style={{ margin: "0 16px 16px" }}>
                 <Analyse title="Analyse territoriale">
-                  <p><b>Observation :</b> la zone de {plusEcarte.b} représente {pBase} % des communautés éligibles au {plusEcarte.pays}, et {pSel} % des communautés retenues au {plusEcarte.pays}.</p>
+                  <p><b>Observation :</b> la zone de {plusEcarte.b} compte {plusEcarte.n} communautés éligibles au {plusEcarte.pays} sur {plusEcarte.totalBasePays} ({pBase} %), et {plusEcarte.s} des {plusEcarte.totalSelPays} communautés retenues au {plusEcarte.pays} ({pSel} %).</p>
                   <p><b>Ce que ça veut dire :</b> {lecture}</p>
                   <p><b>Implication :</b> obtenir plus (ou moins) de places que son poids de départ n'est pas nécessairement un problème — cela peut refléter une réalité de terrain (communautés vraiment plus proches, plus récentes ou plus concentrées dans cette zone). Mais un écart important mérite d'être confirmé comme un choix assumé plutôt qu'un effet de bord du score.</p>
                   <p className="sp-retenir">🎯 <b>À retenir :</b> cette comparaison se fait toujours entre communautés d'un même pays (jamais Sénégal contre Gambie directement) — c'est la bonne façon de repérer un déséquilibre, contrairement à un simple taux de sélection local qui varie surtout avec la distance choisie sur la carte.</p>
@@ -1102,7 +1106,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                 const totalSelPays = sel.filter((x) => x.Pays === r.pays).length;
                 const partSelection = pct(r.s, totalSelPays);
                 const partBase = pct(r.n, totalBasePays);
-                return { ...r, partSelection, partBase, ecart: partSelection - partBase };
+                return { ...r, totalBasePays, totalSelPays, partSelection, partBase, ecart: partSelection - partBase };
               });
             if (!avecEcart.length) return null;
             const plusEcartee = avecEcart.reduce((max, x) => (Math.abs(x.ecart) > Math.abs(max.ecart) ? x : max), avecEcart[0]);
@@ -1111,7 +1115,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             return (
               <div style={{ margin: "0 16px 16px" }}>
                 <Analyse title="Analyse régionale">
-                  <p><b>Observation :</b> la région {plusEcartee.rg} représente {rBase} % des communautés éligibles au {plusEcartee.pays}, et {rSel} % des communautés retenues au {plusEcartee.pays}.</p>
+                  <p><b>Observation :</b> la région {plusEcartee.rg} compte {plusEcartee.n} communautés éligibles au {plusEcartee.pays} sur {plusEcartee.totalBasePays} ({rBase} %), et {plusEcartee.s} des {plusEcartee.totalSelPays} communautés retenues au {plusEcartee.pays} ({rSel} %).</p>
                   <p><b>Ce que ça veut dire :</b> {Math.abs(plusEcartee.ecart) < 5
                   ? `Sa part reste à peu près la même entre les communautés éligibles (${rBase} %) et celles retenues (${rSel} %) — pas de déséquilibre notable.`
                   : plusEcartee.ecart > 0
