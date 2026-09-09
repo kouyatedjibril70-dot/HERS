@@ -389,14 +389,21 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
   }
 
   if (mode === "route") {
-    const bonAcces = rows.filter((r) => Number(r["dist_route_km"]) <= 1).length;
-    const partBonAcces = pct(bonAcces, n);
+    // Dénominateur = communautés ayant dist_route_km ; les manquantes sont comptées à part
+    // et ne doivent pas gonfler artificiellement une classe.
+    const avecDist = rows.filter((r) => Number.isFinite(Number(r["dist_route_km"])));
+    const m = avecDist.length;
+    const lecture = "Cet indicateur situe chaque communauté par rapport à la route la plus proche. Il donne une première lecture de l'accessibilité géographique, mais ne renseigne pas à lui seul sur l'état des routes, leur praticabilité selon les saisons ou le temps réel nécessaire pour se déplacer.";
+    const retenir = "L'accès à une route est un indicateur de contexte territorial et n'entre pas dans le score de sélection actuel. Les communautés situées à plus de 3 km d'une route constituent toutefois un groupe à considérer pour la planification des déplacements et des activités de terrain.";
+    if (m === 0) return { observation: "Aucune donnée de distance à une route disponible dans la vue actuelle.", lecture, retenir };
+    const d = (r: Community) => Number(r["dist_route_km"]);
+    const proche = avecDist.filter((r) => d(r) <= 1).length;
+    const loin = avecDist.filter((r) => d(r) > 3).length;
+    const sansDonnee = n - m;
     return {
-      observation: `Sur ${n} communautés affichées, ${cpt(bonAcces, n)} sont à moins d'1 km d'une route praticable (carte communautaire en ligne).`,
-      lecture: partBonAcces >= 50
-        ? `La majorité de ce sous-ensemble (${cpt(bonAcces, n)}) bénéficie d'un bon accès routier — un atout pour l'acheminement des intrants agricoles et l'accès aux marchés, pertinent pour le volet chaînes de valeur horticoles du programme.`
-        : `Seule une minorité de ce sous-ensemble (${cpt(bonAcces, n)}) est à moins d'1 km d'une route — l'accès routier est donc hétérogène dans ce groupe.`,
-      retenir: "Comme pour le potentiel agricole, cette donnée est informative mais n'entre pas dans le score de sélection actuel.",
+      observation: `Sur ${m} communautés affichées${sansDonnee > 0 ? " disposant de la donnée" : ""}, ${cpt(proche, m)} se situent à moins d'1 km d'une route (données OpenStreetMap), et ${cpt(loin, m)} à plus de 3 km.${sansDonnee > 0 ? ` ${sansDonnee} communauté${sansDonnee > 1 ? "s ne disposent" : " ne dispose"} pas de cette donnée.` : ""}`,
+      lecture,
+      retenir,
     };
   }
 
