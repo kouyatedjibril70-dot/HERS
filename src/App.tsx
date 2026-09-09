@@ -70,12 +70,12 @@ function lectureSelection(rows:Community[]):{paras:string[]}|null{
   ?`La vue est filtrée sur les seules communautés retenues (**${sel.length}**). Leur distance moyenne à un bureau de coordination est de **${distMoy.toFixed(0)} km**.`
   :`**${sel.length} communautés** sont retenues dans la vue courante, soit **${taux.toFixed(0)} %** des **${n.toLocaleString("fr-FR")}** communautés affichées. Leur distance moyenne à un bureau de coordination est de **${distMoy.toFixed(0)} km**.`;
  const p1=part<10
-  ?`La proximité d'un bureau se retrouve nettement dans la sélection : seules **${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de 100 km. La contrainte d'accessibilité géographique est donc peu structurante ici.`
-  :`La proximité d'un bureau n'explique pas à elle seule la sélection : **${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de 100 km. Elles ont été retenues malgré cette contrainte d'accessibilité, du fait de leur rang. Le classement est établi séparément pour le Sénégal et la Gambie.`;
+  ?`Seules **${eloignees}** communautés retenues (**${part.toFixed(0)} %**) sont à plus de **100 km** d'un bureau. Elles y figurent en raison de leur rang dans le classement de leur pays, établi séparément pour le Sénégal et la Gambie.`
+  :`**${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de **100 km** d'un bureau. Elles figurent dans la sélection en raison de leur rang dans le classement de leur pays, établi séparément pour le Sénégal et la Gambie.`;
  const p2=part<10
   ?`Pour aller plus loin (comparaison retenues / non-retenues, concentration par bureau, communautés éloignées), voir l'onglet Analyse spatiale.`
   :part<25
-   ?`L'enjeu opérationnel porte surtout sur ces communautés éloignées : concentration par bureau, répartition régionale et poids dans la charge de supervision sont à examiner avant validation. L'onglet Analyse spatiale (« Communautés éloignées », « Par bureau / région », comparaison retenues / non-retenues) permet d'aller plus loin.`
+   ?`L'enjeu opérationnel porte principalement sur ces communautés éloignées : leur concentration par bureau, leur répartition régionale et leur poids dans la charge de supervision peuvent être examinés avant la validation. L'onglet Analyse spatiale (« Communautés éloignées », « Par bureau / région » et comparaison retenues / non-retenues) permet d'approfondir ces éléments.`
    :`Une part importante de la sélection est éloignée d'un bureau : la logistique de supervision (concentration par bureau, répartition régionale, charge de déplacement) doit être cadrée dès la planification. Voir l'onglet Analyse spatiale (« Communautés éloignées », « Par bureau / région »).`;
  return {paras:[p0,p1,p2]};
 }
