@@ -409,24 +409,40 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
 
   // --- Modes « distance à une ressource » (OpenStreetMap, à vol d'oiseau) : marché, eau, ville.
   //     Données de contexte uniquement — n'entrent pas dans le score de sélection.
+  //     On ne parle jamais d'« accès » ni d'« éloignement » (une ressource peut exister sans être
+  //     cartographiée), seulement de distance « à ce qui est identifié dans les données disponibles ».
   if (mode === "marche" || mode === "eau" || mode === "ville") {
     const cfg = {
-      marche: { field: "dist_marche_osm_km", proche: 10, loin: 50, nom: "un marché", limite: "La couverture OpenStreetMap est partielle pour les marchés hebdomadaires ruraux : une distance élevée peut surestimer l'éloignement réel." },
-      eau: { field: "dist_eau_osm_km", proche: 2, loin: 25, nom: "un point d'eau (rivière, plan d'eau, puits, forage)", limite: "Couverture OpenStreetMap bonne pour l'eau de surface, partielle pour les puits et forages." },
-      ville: { field: "dist_ville_km", proche: 5, loin: 30, nom: "une ville", limite: "La ville la plus proche est un repère d'accès aux services, au transport et aux débouchés." },
+      marche: {
+        field: "dist_marche_osm_km", proche: 10, loin: 50,
+        nom: "un marché identifié dans les données disponibles",
+        lecture: "La proximité d'un marché identifié varie selon les communautés. Cette distance donne une première indication de l'accès géographique aux marchés, mais elle peut être surestimée dans les zones rurales où les marchés hebdomadaires ou locaux sont peu ou pas cartographiés.",
+        retenir: "Cet indicateur est un élément de contexte territorial et n'entre pas dans le score de sélection actuel. Il peut aider à repérer les communautés nécessitant une vérification locale de leur accès réel aux marchés.",
+      },
+      eau: {
+        field: "dist_eau_osm_km", proche: 2, loin: 25,
+        nom: "un point d'eau identifié dans les données disponibles (rivière, plan d'eau, puits, forage)",
+        lecture: "La proximité d'un point d'eau identifié varie selon les communautés. La couverture OpenStreetMap est bonne pour l'eau de surface, mais partielle pour les puits et forages — la distance peut donc être surestimée là où ces points ne sont pas cartographiés.",
+        retenir: "Cet indicateur est un élément de contexte territorial et n'entre pas dans le score de sélection actuel. Il peut aider à repérer les communautés nécessitant une vérification locale de leur accès à l'eau.",
+      },
+      ville: {
+        field: "dist_ville_km", proche: 5, loin: 30,
+        nom: "une ville",
+        lecture: "La distance à la ville la plus proche varie selon les communautés. Elle donne un repère d'accès aux services, au transport et aux débouchés, sans indiquer l'état des routes ni le temps de trajet réel.",
+        retenir: "Cet indicateur est un élément de contexte territorial et n'entre pas dans le score de sélection actuel. Il peut aider à situer les communautés les plus éloignées des centres urbains pour la planification des activités de terrain.",
+      },
     }[mode];
-    const vals = rows.map((r) => Number(r[cfg.field])).filter((v) => Number.isFinite(v));
-    if (vals.length === 0) return null;
-    const med = [...vals].sort((a, b) => a - b)[Math.floor(vals.length / 2)];
-    const nProche = vals.filter((v) => v <= cfg.proche).length;
-    const nLoin = vals.filter((v) => v > cfg.loin).length;
-    const partProche = pct(nProche, vals.length);
+    const avec = rows.filter((r) => Number.isFinite(Number(r[cfg.field])));
+    const m = avec.length;
+    if (m === 0) return null;
+    const val = (r: Community) => Number(r[cfg.field]);
+    const nProche = avec.filter((r) => val(r) <= cfg.proche).length;
+    const nLoin = avec.filter((r) => val(r) > cfg.loin).length;
+    const sansDonnee = n - m;
     return {
-      observation: `Distance médiane à ${cfg.nom} : ${med.toFixed(1)} km sur ${vals.length} communautés affichées. ${cpt(nProche, vals.length)} sont à moins de ${cfg.proche} km, ${cpt(nLoin, vals.length)} à plus de ${cfg.loin} km.`,
-      lecture: partProche >= 50
-        ? `La majorité de ce sous-ensemble (${cpt(nProche, vals.length)}) est à faible distance de ${cfg.nom} — un contexte plutôt favorable.`
-        : `Une part importante de ce sous-ensemble (${cpt(nLoin, vals.length)}) est éloignée de ${cfg.nom} cartographié — à vérifier localement avant toute conclusion.`,
-      retenir: `Indicateur de contexte, hors score de sélection. ${cfg.limite}`,
+      observation: `Sur ${m} communautés affichées${sansDonnee > 0 ? " disposant de la donnée" : ""}, ${cpt(nProche, m)} se situent à moins de ${cfg.proche} km d'${cfg.nom}, et ${cpt(nLoin, m)} à plus de ${cfg.loin} km.${sansDonnee > 0 ? ` ${sansDonnee} communauté${sansDonnee > 1 ? "s ne disposent" : " ne dispose"} pas de cette donnée.` : ""}`,
+      lecture: cfg.lecture,
+      retenir: cfg.retenir,
     };
   }
 
