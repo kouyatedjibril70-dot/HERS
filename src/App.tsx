@@ -73,12 +73,16 @@ function lectureSelection(rows:Community[]):{paras:string[]}|null{
  // 2 — Logique de sélection : clé de lecture de la carte. Texte fixe.
  const p1="Chaque communauté reçoit une note, puis les communautés sont classées **séparément pour le Sénégal et la Gambie** ; on retient les mieux classées de chaque pays, en nombre fixé par le programme. La note combine surtout la distance au bureau de coordination, la récence de la fin du PRCC et le nombre de communautés voisines. La pondération se règle à droite : elle change *quelles* communautés sont retenues, jamais *combien*.";
 
- // 3 — Premier point d'attention : recalculé à chaque changement de pondération / filtre.
- const p2=part<10
-  ?`**${eloignees.toLocaleString("fr-FR")}** communautés retenues (**${part.toFixed(0)} %**) sont à plus de **100 km** d'un bureau, un enjeu limité ici. Les points d'attention (concentration par bureau, équilibre linguistique, qualité des données) sont détaillés dans l'onglet **Analyse spatiale**.`
+ // 3 — Premier point d'attention : structure commune, phrase d'implication graduée selon la part
+ //     réelle de communautés éloignées (recalculée à chaque changement de pondération / filtre),
+ //     renvoi identique dans les trois cas. Jamais de jugement « bon / mauvais » sur la sélection.
+ const detailEloign=`**${eloignees.toLocaleString("fr-FR")}** communautés retenues (**${part.toFixed(0)} %**) sont à plus de **100 km** d'un bureau`;
+ const implicationEloign=part<10
+  ?"L'enjeu lié à l'éloignement apparaît donc limité dans la sélection actuelle."
   :part<25
-   ?`Premier point d'attention : **${eloignees.toLocaleString("fr-FR")}** communautés retenues (**${part.toFixed(0)} %**) sont à plus de **100 km** d'un bureau. Ce sujet, la concentration par bureau, l'équilibre linguistique et les données encore incomplètes sont détaillés dans l'onglet **Analyse spatiale**.`
-   :`Une part importante de la sélection (**${eloignees.toLocaleString("fr-FR")}** communautés, **${part.toFixed(0)} %**) est à plus de **100 km** d'un bureau : la logistique de supervision sera à cadrer dès la planification. Ce sujet et les autres points d'attention sont détaillés dans l'onglet **Analyse spatiale**.`;
+   ?"Leur répartition peut être examinée pour anticiper les besoins de déplacement et de supervision."
+   :"Leur volume et leur répartition méritent une attention particulière pour l'organisation des déplacements et de la supervision.";
+ const p2=`Premier point d'attention : ${part<10?"seules ":""}${detailEloign}. ${implicationEloign} La concentration par bureau, l'équilibre linguistique et les données encore incomplètes sont détaillés dans l'onglet **Analyse spatiale**.`;
  return {paras:[p0,p1,p2]};
 }
 // Rend un texte avec **gras** et *italique* en fragments React.
