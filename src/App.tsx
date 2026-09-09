@@ -70,8 +70,8 @@ function lectureSelection(rows:Community[]):{paras:string[]}|null{
   ?`La vue est filtrée sur les seules communautés retenues (**${sel.length}**). Leur distance moyenne à un bureau de coordination est de **${distMoy.toFixed(0)} km**.`
   :`**${sel.length} communautés** sont retenues dans la vue courante, soit **${taux.toFixed(0)} %** des **${n.toLocaleString("fr-FR")}** communautés affichées. Leur distance moyenne à un bureau de coordination est de **${distMoy.toFixed(0)} km**.`;
  const p1=part<10
-  ?`La proximité d'un bureau se retrouve nettement dans la sélection : seules **${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de 100 km. La contrainte d'accessibilité géographique est donc peu structurante ici.`
-  :`La proximité d'un bureau n'explique pas à elle seule la sélection : **${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de 100 km. Elles ont été retenues malgré cette contrainte d'accessibilité, du fait de leur rang — le classement étant établi séparément pour le Sénégal et la Gambie.`;
+  ?`La proximité d'un bureau se retrouve nettement dans la sélection : seules **${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de **100 km**. La contrainte d'accessibilité géographique est donc peu structurante ici.`
+  :`La proximité d'un bureau n'explique pas à elle seule la sélection : **${part.toFixed(0)} %** des communautés retenues (**${eloignees}**) sont à plus de **100 km**. Elles ont été retenues malgré cette contrainte d'accessibilité, du fait de leur rang — le classement étant établi séparément pour le Sénégal et la Gambie.`;
  const p2=part<10
   ?`Pour aller plus loin — comparaison retenues / non-retenues, concentration par bureau, communautés éloignées — voir l'onglet Analyse spatiale.`
   :part<25
