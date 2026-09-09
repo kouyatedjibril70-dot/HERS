@@ -421,9 +421,9 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
       },
       eau: {
         field: "dist_eau_osm_km", proche: 2, loin: 25,
-        nom: "un point d'eau identifié dans les données disponibles (rivière, plan d'eau, puits, forage)",
-        lecture: "La proximité d'un point d'eau identifié varie selon les communautés. La couverture OpenStreetMap est bonne pour l'eau de surface, mais partielle pour les puits et forages — la distance peut donc être surestimée là où ces points ne sont pas cartographiés.",
-        retenir: "Cet indicateur est un élément de contexte territorial et n'entre pas dans le score de sélection actuel. Il peut aider à repérer les communautés nécessitant une vérification locale de leur accès à l'eau.",
+        nom: "un point d'eau identifié dans les données disponibles (rivière, plan d'eau, puits ou forage)",
+        lecture: "La distance à un point d'eau identifié varie selon les communautés. Ce repère regroupe des ressources très différentes — rivière, plan d'eau, puits, forage — qui n'ont pas toutes la même utilité au quotidien. Une distance élevée ne signifie pas qu'une communauté n'a pas accès à l'eau : certains puits, forages ou points d'eau locaux peuvent ne pas figurer dans les données.",
+        retenir: "Cet indicateur est un élément de contexte territorial et n'entre pas dans le score de sélection actuel. Les communautés situées à plus de 25 km d'un point d'eau identifié peuvent constituer un groupe à vérifier localement, notamment lorsque l'accès à l'eau est important pour les activités envisagées.",
       },
       ville: {
         field: "dist_ville_km", proche: 5, loin: 30,
