@@ -294,13 +294,15 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
   if (mode === "score") {
     const haut = rows.filter((r) => r.score >= 70).length;
     const bas = rows.filter((r) => r.score < 40).length;
+    const moyen = n - haut - bas;
     const basSel = rows.filter((r) => r.score < 40 && r.selected).length;
+    const sV = basSel > 1 ? "s" : "";
     return {
-      observation: `Sur ${n} communautés affichées, ${cpt(haut, n)} ont un score ≥ 70 et ${cpt(bas, n)} un score < 40.`,
+      observation: `Sur ${n} communautés affichées, ${cpt(haut, n)} ont un score ≥ 70, ${cpt(moyen, n)} entre 40 et 70, et ${cpt(bas, n)} un score inférieur à 40.`,
       lecture: basSel > 0
-        ? `${basSel} communauté${basSel > 1 ? "s" : ""} à score relativement faible (< 40) ${basSel > 1 ? "sont" : "est"} malgré tout sélectionnée${basSel > 1 ? "s" : ""}. Cela s'explique par le classement séparé par pays : une communauté est retenue si elle fait partie des mieux classées de son pays, pas selon un seuil de score absolu commun.`
-        : "Aucune communauté à score faible n'est sélectionnée dans ce sous-ensemble — le score absolu et le statut de sélection sont ici cohérents.",
-      retenir: "Le score sert à classer les communautés entre elles, pas à fixer une note absolue de qualité — deux communautés de pays différents avec le même score peuvent avoir un statut différent.",
+        ? `${basSel} communauté${sV} retenue${sV} ${basSel > 1 ? "ont" : "a"} un score inférieur à 40. Ce n'est pas une anomalie : le classement se fait séparément pour le Sénégal et la Gambie, avec un nombre de places fixé par pays. Une communauté à score modéré est donc retenue si elle fait partie des mieux classées de son pays. Pour savoir ce qui la fait entrer, ouvrir sa fiche : on y voit son rang et le détail de son score.`
+        : "Aucune communauté à score inférieur à 40 n'est retenue dans ce sous-ensemble — le score et la sélection concordent ici.",
+      retenir: "Le score sert à classer les communautés, pas à leur donner une note de qualité. Un score bas retenu n'est pas un problème en soi — c'est le rang dans le pays qui décide.",
     };
   }
 
