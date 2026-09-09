@@ -311,9 +311,9 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     rows.forEach((r) => { const l = r["Langue normalisée"] || "—"; parLangue[l] = (parLangue[l] || 0) + 1; });
     const top = Object.entries(parLangue).sort((a, b) => b[1] - a[1])[0];
     return {
-      observation: `${Object.keys(parLangue).length} langue(s) représentée(s) parmi les ${n} communautés affichées. La plus fréquente est ${top[0]} : ${cpt(top[1], n)}.`,
-      lecture: "Cette répartition reflète la composition linguistique du sous-ensemble affiché, sans lien avec le score — la langue n'est pas un critère de sélection.",
-      retenir: "Utile pour anticiper les besoins de couverture linguistique des équipes d'animation dans cette zone, pas pour évaluer la qualité de la sélection.",
+      observation: `${Object.keys(parLangue).length} langues sont représentées parmi les ${n} communautés affichées. ${top[0]} est la langue la plus représentée, avec ${cpt(top[1], n)}.`,
+      lecture: "Cette répartition décrit la composition linguistique des communautés affichées. La langue n'entre pas dans le calcul du score et ne détermine donc pas directement la sélection.",
+      retenir: "Information surtout utile pour anticiper les besoins linguistiques des équipes (animation, supervision) et vérifier que la sélection reste suffisamment représentative des différentes communautés linguistiques. Les écarts entre la composition de la base et celle de la sélection sont détaillés dans « Profil de la sélection » (tableau de représentation linguistique).",
     };
   }
 
