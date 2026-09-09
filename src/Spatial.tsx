@@ -335,16 +335,25 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
   }
 
   if (mode === "prcc") {
-    const recent = rows.filter((r) => num(r, "Année Fin PRCC") >= 2019).length;
-    const partRecent = pct(recent, n);
+    // On compte sur les communautés qui ont une date de fin renseignée — sinon une valeur manquante
+    // (NaN) retombe silencieusement dans la classe la plus ancienne et fausse la répartition.
+    const withYear = rows.filter((r) => Number.isFinite(num(r, "Année Fin PRCC")));
+    const m = withYear.length;
+    if (m === 0) return {
+      observation: "Aucune date de fin de PRCC renseignée dans la vue actuelle.",
+      lecture: "La date de fin du PRCC sert à distinguer les communautés selon l'ancienneté de leur expérience avec le programme et fait partie des critères du classement.",
+      retenir: "Pour voir comment cette dimension se retrouve dans la sélection, voir « Profil de la sélection ». Le poids de ce critère est réglable dans « Vue d'ensemble » (détaillé dans « Méthode »).",
+    };
+    const yr = (r: Community) => num(r, "Année Fin PRCC");
+    const av2014 = withYear.filter((r) => yr(r) < 2014).length;
+    const p1418 = withYear.filter((r) => yr(r) >= 2014 && yr(r) < 2019).length;
+    const p1923 = withYear.filter((r) => yr(r) >= 2019 && yr(r) < 2024).length;
+    const dep2024 = withYear.filter((r) => yr(r) >= 2024).length;
+    const sansDate = n - m;
     return {
-      observation: `Sur ${n} communautés affichées, ${cpt(recent, n)} ont terminé leur PRCC en 2019 ou après.`,
-      // Conditionné sur la vraie proportion observée : le mode "toujours cohérent" d'origine affirmait
-      // "proportion élevée" même quand elle ne l'était pas sur le sous-ensemble filtré.
-      lecture: partRecent >= 50
-        ? `Une majorité de ce sous-ensemble (${cpt(recent, n)}) a un PRCC récent — cohérent avec le critère du projet qui privilégie les communautés dont les structures de gouvernance sont encore actives.`
-        : `Seule une minorité de ce sous-ensemble (${cpt(recent, n)}) a un PRCC récent — la récence est donc hétérogène ici, malgré son poids de 35 % dans le score.`,
-      retenir: "La récence du PRCC pèse 35 % du score actuel — c'est l'un des critères les plus déterminants de la sélection.",
+      observation: `Sur ${m} communautés affichées avec une date de fin de PRCC renseignée : ${cpt(av2014, m)} avant 2014, ${cpt(p1418, m)} entre 2014 et 2018, ${cpt(p1923, m)} entre 2019 et 2023, et ${cpt(dep2024, m)} depuis 2024.${sansDate > 0 ? ` ${sansDate} communauté${sansDate > 1 ? "s" : ""} sans date renseignée.` : ""}`,
+      lecture: "La base rassemble des communautés à des niveaux de récence de PRCC très différents. La date de fin sert à les distinguer et fait partie des critères qui établissent le classement.",
+      retenir: "La date de fin du PRCC aide à différencier les communautés selon l'ancienneté de leur expérience avec le programme. Pour voir comment cette dimension se retrouve dans la sélection et comparer les retenues aux autres, voir « Profil de la sélection ». Le poids de ce critère est réglable dans « Vue d'ensemble » (détaillé dans « Méthode »).",
     };
   }
 
