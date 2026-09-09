@@ -427,9 +427,9 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
       },
       ville: {
         field: "dist_ville_km", proche: 5, loin: 30,
-        nom: "une ville",
-        lecture: "La distance à la ville la plus proche varie selon les communautés. Elle donne un repère d'accès aux services, au transport et aux débouchés, sans indiquer l'état des routes ni le temps de trajet réel.",
-        retenir: "Cet indicateur est un élément de contexte territorial et n'entre pas dans le score de sélection actuel. Il peut aider à situer les communautés les plus éloignées des centres urbains pour la planification des activités de terrain.",
+        nom: "une ville identifiée",
+        lecture: "La distance à la ville la plus proche varie selon les communautés. Cette information donne une première indication de leur proximité des pôles urbains, mais une distance faible ne garantit pas à elle seule l'accès aux services, aux transports ou aux marchés.",
+        retenir: "Cet indicateur est un élément de contexte territorial et n'entre pas dans le score de sélection actuel. Il peut aider à apprécier la situation géographique des communautés et à identifier celles qui sont les plus éloignées des pôles urbains, à prendre en compte pour l'organisation des formations et des déplacements.",
       },
     }[mode];
     const avec = rows.filter((r) => Number.isFinite(Number(r[cfg.field])));
