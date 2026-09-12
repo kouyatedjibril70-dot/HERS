@@ -267,6 +267,7 @@ main>section+section{margin-top:24px}
 .method-table tr:last-child td{border-bottom:0}
 .method-doc .callout{margin:0 0 8px}
 .method-foot{margin-top:26px;padding-top:14px;border-top:1px solid #eef1f5;font-size:12.5px;color:#94a3b8}
+.method-note{margin:-6px 0 12px;font-size:12px;font-style:italic;color:#8593a8}
 .sp-layers{margin-top:6px;border:1px solid #dfe6ef;border-radius:9px;background:#fbfdff;overflow:hidden}
 .sp-layers-head{width:100%;border:0;background:none;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font:inherit;font-size:11px;color:#354258}
 .sp-layers-head:hover{background:#f2f6fb}

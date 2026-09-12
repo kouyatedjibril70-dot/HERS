@@ -31,6 +31,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             </tbody>
           </table>
         </div>
+        <p className="method-note">Poids par défaut — réglables en direct dans l'onglet <b>Vue d'ensemble</b>, sans toucher au nombre de communautés retenues.</p>
         <p>Un quatrième critère, la <b>Population</b>, existe dans le modèle mais est <b>volontairement à 0 %</b> aujourd'hui :</p>
         <div className="callout">
           <b>Population</b>
