@@ -1106,10 +1106,10 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             return (
               <div style={{ margin: "0 16px 16px" }}>
                 <Analyse title="Analyse territoriale">
-                  <p><b>Observation :</b> la zone de {plusEcarte.b} compte {plusEcarte.n} communautés éligibles au {plusEcarte.pays} sur {plusEcarte.totalBasePays} ({pBase} %), et {plusEcarte.s} des {plusEcarte.totalSelPays} communautés retenues au {plusEcarte.pays} ({pSel} %).</p>
+                  <p><b>Observation :</b> la zone de {plusEcarte.b} compte {plusEcarte.n} communautés éligibles au {plusEcarte.pays}, soit {pBase} % de la base. Elle représente {plusEcarte.s} des {plusEcarte.totalSelPays} communautés retenues au {plusEcarte.pays}, soit {pSel} % de la sélection.</p>
                   <p><b>Ce que ça veut dire :</b> {lecture}</p>
-                  <p><b>Implication :</b> obtenir plus (ou moins) de places que son poids de départ n'est pas nécessairement un problème : cela peut refléter une réalité de terrain (communautés vraiment plus proches, plus récentes ou plus concentrées dans cette zone). Mais un écart important mérite d'être confirmé comme un choix assumé plutôt qu'un effet de bord du score.</p>
-                  <p className="sp-retenir">🎯 <b>À retenir :</b> cette comparaison se fait toujours entre communautés d'un même pays (jamais Sénégal contre Gambie directement). C'est la bonne façon de repérer un déséquilibre, contrairement à un simple taux de sélection local qui varie surtout avec la distance choisie sur la carte.</p>
+                  <p><b>Implication :</b> cet écart peut être lié aux caractéristiques prises en compte par le classement, notamment la distance au bureau, la récence du PRCC et la concentration locale. Il ne signifie pas nécessairement un déséquilibre : il permet surtout de vérifier si la répartition obtenue correspond aux choix attendus pour le programme.</p>
+                  <p className="sp-retenir">🎯 <b>À retenir :</b> cette comparaison se fait toujours entre communautés d'un même pays (jamais Sénégal contre Gambie directement). Elle permet d'identifier les zones dont la part dans la sélection diffère de leur poids dans la base de départ ; un écart important peut ensuite être approfondi dans le détail du classement.</p>
                 </Analyse>
               </div>
             );
