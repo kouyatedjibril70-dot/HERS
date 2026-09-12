@@ -1046,32 +1046,16 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
           </table>
         </div>
         {(() => {
-          const gaps = compareGroups(sel, nonsel);
-          const top = gaps[0];
           const ecartScore = gS.score - gN.score;
-
-          let quiExplique: string;
-          if (top) {
-            const detail = formatDetail(top.key, top.detailA, top.detailB, "sélectionnées", "hors sélection");
-            quiExplique = `Le critère qui différencie le plus les deux groupes est ${CRIT_LABELS[top.key]}, ${detail}.`;
-          } else {
-            quiExplique = "Aucun critère ne se détache nettement à lui seul : la différence entre les deux groupes vient d'une combinaison de plusieurs critères.";
-          }
-
-          const negligeables = gaps.filter((g) => g !== top && Math.abs(g.gap) < 3);
-          const mentionNegligeable = negligeables.length > 0
-            ? ` À l'inverse, ${negligeables.map((g) => CRIT_LABELS[g.key]).join(" et ")} ${negligeables.length > 1 ? "influencent" : "influence"} peu la composition finale de la sélection : l'écart entre les deux groupes y est faible.`
-            : "";
-
           const popPct = pct(snPop, snTot);
 
           return (
             <div style={{ margin: "0 16px 16px" }}>
               <Analyse title="Analyse comparative">
                 <p><b>Observation :</b> les {sel.length} communautés sélectionnées ont un score moyen de {gS.score.toFixed(1)}, contre {gN.score.toFixed(1)} pour les {nonsel.length} non sélectionnées, soit un écart de {ecartScore.toFixed(1)} points.</p>
-                <p><b>Ce que ça veut dire :</b> {quiExplique}{mentionNegligeable}</p>
-                <p><b>Implication :</b> le classement produit bien une sélection différenciée, cohérente avec les critères retenus (distance, concentration locale, récence du PRCC). Ce n'est pas un tirage proche du hasard.</p>
-                <p className="sp-retenir">🎯 <b>À retenir :</b> la ligne « Population moyenne » de ce tableau ne concerne que le Sénégal et seulement les communautés où cette donnée existe ({snPop} sur {snTot}, soit {popPct.toFixed(0)} % de la base sénégalaise). Elle ne doit pas être lue comme un indicateur de poids réel dans le score, puisque la population ne compte actuellement pour rien dans le calcul du score (réglage modifiable dans l'onglet Vue d'ensemble).</p>
+                <p><b>Ce que ça veut dire :</b> les deux groupes présentent des profils différents. Les communautés sélectionnées sont en moyenne plus proches des bureaux de coordination ({gS.dist.toFixed(0)} km contre {gN.dist.toFixed(0)} km), ont plus souvent un PRCC terminé en 2020 ou après ({gS.recent.toFixed(0)} % contre {gN.recent.toFixed(0)} %), et comptent davantage de communautés voisines dans un rayon de 25 km ({gS.dens.toFixed(1)} contre {gN.dens.toFixed(1)}).</p>
+                <p><b>Implication :</b> le classement produit donc une sélection nettement différenciée. Ces différences correspondent aux critères utilisés dans le calcul du score (distance au bureau, récence du PRCC, concentration locale). La sélection présente donc un profil nettement différent d'une sélection aléatoire.</p>
+                <p className="sp-retenir">🎯 <b>À retenir :</b> la ligne « Population moyenne » de ce tableau ne concerne que le Sénégal et seulement les communautés où cette donnée existe ({snPop} sur {snTot}, soit {popPct.toFixed(0)} % de la base sénégalaise). Elle ne doit pas être lue comme un indicateur du poids réel de la population dans le score : ce critère est pondéré à 0 % par défaut (réglable dans l'onglet Vue d'ensemble), et la donnée manque en plus pour toute la Gambie.</p>
               </Analyse>
             </div>
           );
