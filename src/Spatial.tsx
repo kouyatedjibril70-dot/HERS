@@ -1098,9 +1098,9 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             if (Math.abs(plusEcarte.ecart) < 5) {
               lecture = `Sur 100 communautés éligibles au ${plusEcarte.pays}, ${pBase} viennent de la zone de ${plusEcarte.b}, et sur 100 communautés retenues, à peu près autant (${pSel}). Aucun bureau ne s'écarte nettement de sa part de départ.`;
             } else if (plusEcarte.ecart > 0) {
-              lecture = `Sur 100 communautés éligibles au ${plusEcarte.pays}, ${pBase} viennent de la zone de ${plusEcarte.b}. Mais sur 100 communautés retenues au ${plusEcarte.pays}, ${pSel} en viennent : sa part augmente de ${ecartAbs} points entre le départ et l'arrivée. La zone de ${plusEcarte.b} obtient donc plus de places que ce que son nombre de communautés éligibles laisserait attendre.`;
+              lecture = `Sur 100 communautés éligibles au ${plusEcarte.pays}, ${pBase} viennent de la zone de ${plusEcarte.b}. Mais sur 100 communautés retenues au ${plusEcarte.pays}, ${pSel} en viennent : sa part augmente de ${ecartAbs} points entre le départ et l'arrivée. Sa part dans la sélection est donc supérieure à son poids dans la base de départ.`;
             } else {
-              lecture = `Sur 100 communautés éligibles au ${plusEcarte.pays}, ${pBase} viennent de la zone de ${plusEcarte.b}. Mais sur 100 communautés retenues au ${plusEcarte.pays}, seulement ${pSel} en viennent : sa part diminue de ${ecartAbs} points entre le départ et l'arrivée. La zone de ${plusEcarte.b} obtient donc moins de places que ce que son nombre de communautés éligibles laisserait attendre.`;
+              lecture = `Sur 100 communautés éligibles au ${plusEcarte.pays}, ${pBase} viennent de la zone de ${plusEcarte.b}. Mais sur 100 communautés retenues au ${plusEcarte.pays}, seulement ${pSel} en viennent : sa part diminue de ${ecartAbs} points entre le départ et l'arrivée. Sa part dans la sélection est donc inférieure à son poids dans la base de départ.`;
             }
 
             return (
@@ -1146,13 +1146,14 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             return (
               <div style={{ margin: "0 16px 16px" }}>
                 <Analyse title="Analyse régionale">
-                  <p><b>Observation :</b> la région {plusEcartee.rg} compte {plusEcartee.n} communautés éligibles au {plusEcartee.pays} sur {plusEcartee.totalBasePays} ({rBase} %), et {plusEcartee.s} des {plusEcartee.totalSelPays} communautés retenues au {plusEcartee.pays} ({rSel} %).</p>
+                  <p><b>Observation :</b> la région {plusEcartee.rg} compte {plusEcartee.n} communautés éligibles au {plusEcartee.pays}, soit {rBase} % de la base. Elle représente {plusEcartee.s} des {plusEcartee.totalSelPays} communautés retenues au {plusEcartee.pays}, soit {rSel} % de la sélection.</p>
                   <p><b>Ce que ça veut dire :</b> {Math.abs(plusEcartee.ecart) < 5
                   ? `Sa part reste à peu près la même entre les communautés éligibles (${rBase} %) et celles retenues (${rSel} %) : pas de déséquilibre notable.`
                   : plusEcartee.ecart > 0
-                    ? `Sur 100 communautés éligibles au ${plusEcartee.pays}, ${rBase} viennent de cette région ; sur 100 retenues, ${rSel} en viennent, soit ${rEcart} points de plus qu'attendu.`
-                    : `Sur 100 communautés éligibles au ${plusEcartee.pays}, ${rBase} viennent de cette région ; sur 100 retenues, seulement ${rSel} en viennent, soit ${rEcart} points de moins qu'attendu.`}</p>
-                  <p className="sp-retenir">🎯 <b>À retenir :</b> les régions avec moins de 10 communautés dans la base ne sont pas incluses dans cette comparaison : un écart sur un petit effectif n'est pas significatif. La comparaison se fait aussi au sein du même pays, jamais entre Sénégal et Gambie directement.</p>
+                    ? `Sur 100 communautés éligibles au ${plusEcartee.pays}, ${rBase} viennent de cette région ; sur 100 retenues, ${rSel} en viennent, soit ${rEcart} points de plus que dans la base.`
+                    : `Sur 100 communautés éligibles au ${plusEcartee.pays}, ${rBase} viennent de cette région ; sur 100 retenues, seulement ${rSel} en viennent, soit ${rEcart} points de moins que dans la base.`}</p>
+                  <p><b>Implication :</b> cet écart peut être lié aux caractéristiques prises en compte par le classement, notamment la distance au bureau, la récence du PRCC et la concentration locale. Il ne signifie pas nécessairement un déséquilibre : il permet surtout de vérifier si la répartition obtenue correspond aux choix attendus pour le programme.</p>
+                  <p className="sp-retenir">🎯 <b>À retenir :</b> cette lecture compare toujours les communautés à l'intérieur d'un même pays, jamais entre Sénégal et Gambie directement. Les régions avec moins de 10 communautés dans la base (comme Janjangburreh ici) ne sont pas retenues pour cette comparaison : avec un effectif aussi réduit, le taux de sélection peut être très élevé ou très faible sans que cela soit significatif. Les écarts importants peuvent ensuite être approfondis dans le détail du classement.</p>
                 </Analyse>
               </div>
             );
