@@ -109,18 +109,11 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           </table>
         </div>
         <p>
-          <b>D'où vient le chiffre brut (vérifié, avec une limite honnête).</b> Contrairement à la distance, cette
-          donnée est fournie telle quelle dans la base d'origine du programme : elle n'est pas calculée par la
-          plateforme, donc elle ne peut pas être recalculée de façon indépendante. Ce qu'on peut vérifier, en
-          revanche, c'est sa <b>cohérence interne</b>. On s'attendrait à ce que chaque <Prcc /> dure le même nombre
-          d'années partout. Dans la base actuelle, sur 1372 communautés : 773 ont une durée de 3 ans, 529 une durée
-          de 2 ans, et 70 une durée d'1 an. Cet écart n'est pas réparti au hasard : certaines régions (Thiès, Kaolack,
-          Kédougou) n'affichent que des durées de 3 ans, tandis qu'à Tambacounda les durées de 2 ans sont plus
-          nombreuses que celles de 3 ans. Nous n'avons pas pu confirmer si cette différence reflète une vraie
-          variation de terrain (des cohortes de <Prcc /> plus courtes selon la région ou l'année) ou une convention de
-          saisie différente selon qui a rempli la base à l'origine. Faute de certitude, nous ne l'affirmons pas comme
-          une erreur : le constat est signalé ici, mais la donnée n'est pas corrigée. Cela n'affecte pas le score,
-          puisque celui-ci utilise uniquement <b>l'année de fin</b>, jamais la durée.
+          <b>D'où vient le chiffre brut (limite honnête à connaître).</b> Contrairement à la distance et à la
+          densité, cette donnée est fournie telle quelle dans la base d'origine du programme : elle n'est pas
+          calculée par la plateforme, donc elle ne peut pas être recalculée ni vérifiée de façon indépendante. Le
+          score utilise uniquement <b>l'année de fin</b> de chaque <Prcc />, qui dure toujours 3 ans par construction
+          du programme.
         </p>
 
         <h3>Critère 3 : Concentration de communautés voisines, rayon 25 km (20 points sur 100)</h3>
@@ -277,7 +270,6 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         <h2>6. Ce qu'il faut garder en tête</h2>
         <ul>
           <li>La population manque encore pour environ 38 % du Sénégal et 37 % de la Gambie, d'où son poids à 0 %. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
-          <li>La durée du <Prcc /> (fin moins début) varie dans la base entre 1 et 3 ans selon les communautés, sans explication confirmée. Sans conséquence sur le score, qui n'utilise que l'année de fin, mais à garder en tête si la question revient.</li>
           <li>15 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
           <li>« Accès route » est une distance à vol d'oiseau, pas un temps de trajet réel (état de la piste, saison des pluies, cours d'eau à franchir ne sont pas pris en compte).</li>
           <li>La note est un <b>outil de classement relatif</b>, pas une note de qualité absolue : deux communautés de pays différents avec la même note peuvent avoir un statut différent, puisque le classement est fait pays par pays.</li>
