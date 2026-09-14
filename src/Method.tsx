@@ -62,7 +62,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <b>Comment le chiffre brut devient une note (certain, c'est du calcul).</b> On ne compare pas les distances
           en absolu, mais la <b>position</b> de chaque communauté par rapport à toutes les autres de son pays : si
           elle fait partie des plus proches d'un bureau, elle est proche de 100 points ; si elle est parmi les plus
-          éloignées, proche de 0. Ce que ça donne concrètement au Sénégal (1139 communautés) :
+          éloignées, proche de 0. Ce que ça donne concrètement au Sénégal (1138 communautés) :
         </p>
         <div className="method-table">
           <table>
@@ -78,7 +78,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         <p>
           <b>D'où vient le chiffre brut « Distance bureau (km) » (vérifié, pas supposé).</b> Ce chiffre est calculé par
           la plateforme elle-même : distance à vol d'oiseau entre les coordonnées GPS de la communauté et celles du
-          bureau auquel elle est rattachée. Recalculé indépendamment et comparé au chiffre enregistré pour les 1372
+          bureau auquel elle est rattachée. Recalculé indépendamment et comparé au chiffre enregistré pour les 1371
           communautés de la base : <b>correspondance à 100 %, aucun écart.</b>
         </p>
 
@@ -147,7 +147,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           déjà présent dans les données avant ce projet, sans script permettant de savoir comment il avait été
           calculé à l'origine. Il a donc été recalculé indépendamment : distance à vol d'oiseau entre chaque paire de
           communautés, à partir des coordonnées actuelles, comptée si elle est de 25 km ou moins. Comparé au chiffre
-          enregistré pour les 1372 communautés : <b>correspondance à 100 %, aucun écart.</b> Ça n'a pas toujours été
+          enregistré pour les 1371 communautés : <b>correspondance à 100 %, aucun écart.</b> Ça n'a pas toujours été
           le cas : un premier contrôle avait révélé un écart sur 23 % des communautés, concentré sur celles dont la
           position GPS avait été corrigée depuis. Ce champ est désormais recalculé automatiquement à chaque
           correction de position, pour rester exact en continu.
@@ -192,7 +192,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         </p>
         <ul>
           <li>
-            <b>Sénégal (706 communautés sur 1139, soit 62 %) :</b> recensement RGPH 2023 (ANSD), apparié au nom exact
+            <b>Sénégal (706 communautés sur 1138, soit 62 %) :</b> recensement RGPH 2023 (ANSD), apparié au nom exact
             du village. Exemple : <i>LOUBAL BALADJI</i>, commune d'Oréfondé, 3 516 habitants, une valeur directement
             recensée, pas une estimation.
           </li>
