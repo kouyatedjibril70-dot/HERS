@@ -1014,7 +1014,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                 {Object.values(corrections).sort((a, b) => b.ts - a.ts).map((c) => (
                   <div className="sp-corr-row" key={c.code}>
                     <span className="sp-corr-nom">{c.communaute}</span>
-                    <button type="button" className="sp-corr-undo" title="Annuler cette correction — le point revient à sa position d'origine" onClick={() => undoCorrection(c.code)}>↺ Annuler</button>
+                    <button type="button" className="sp-corr-undo" title="Annuler cette correction : le point revient à sa position d'origine" onClick={() => undoCorrection(c.code)}>↺ Annuler</button>
                   </div>
                 ))}
               </div>
