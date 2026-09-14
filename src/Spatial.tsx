@@ -383,12 +383,14 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
 
   if (mode === "population") {
     const avecDonnee = rows.filter((r) => r.POPULATION !== null && r.POPULATION !== undefined).length;
+    const gambieDansVue = rows.some((r) => r.Pays === "Gambie");
     return {
       observation: `Sur ${n} communautés affichées, ${cpt(avecDonnee, n)} ont une donnée de population disponible.`,
       lecture: avecDonnee / n < 0.7
         ? "Cette couverture incomplète est la raison pour laquelle la population n'est pas utilisée comme critère de score actuellement : l'inclure pénaliserait injustement les communautés sans donnée."
         : "La couverture est correcte sur ce sous-ensemble, mais la population reste à 0 % de pondération dans le score global pour rester cohérente sur l'ensemble de la base.",
-      retenir: "Les zones grises sur la carte dans ce mode signalent une absence de donnée, pas une population nulle.",
+      retenir: "Les zones grises sur la carte dans ce mode signalent une absence de donnée, pas une population nulle."
+        + (gambieDansVue ? " Pour la Gambie, les valeurs affichées sont une estimation 2024 (recensement 2013 ajusté à la croissance de chaque région), pas un comptage direct." : ""),
     };
   }
 
@@ -725,6 +727,12 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
     dens: avg(g.map((r) => num(r, "Autres communautés dans 25 km"))),
   });
   const gS = grp(sel), gN = grp(nonsel);
+  const popByCountry = (g: Community[], pays: string) => {
+    const f = g.filter((r) => r.Pays === pays && Number.isFinite(num(r, "POPULATION")));
+    return { avg: avg(f.map((r) => num(r, "POPULATION"))), n: f.length };
+  };
+  const popSnS = popByCountry(sel, "Sénégal"), popSnN = popByCountry(nonsel, "Sénégal");
+  const popGmS = popByCountry(sel, "Gambie"), popGmN = popByCountry(nonsel, "Gambie");
 
   const byBureau = Object.keys(BUREAUX)
     .map((b) => {
@@ -755,10 +763,10 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
   else att.push({ c: "#2f9e6f", t: "La langue n'est pas un critère de sélection. Ce contrôle vérifie que les autres critères (distance, densité, récence) n'introduisent pas, par effet indirect, un déséquilibre linguistique involontaire. Résultat actuel : chaque langue garde une part quasi identique dans la sélection et dans la base (écart de 5 points de pourcentage ou moins pour toutes)." });
   const farShare = pct(far.length, sel.length);
   if (farShare >= 15) att.push({ c: "#e8a13a", t: `${far.length} communautés retenues (${farShare.toFixed(0)} %) sont à plus de ${farThresh} km d'un bureau.` });
-  const gambiaSel = sel.filter((r) => r.Pays === "Gambie").length;
-  att.push({ c: "#d64550", t: `Population indisponible pour la Gambie : ${gambiaSel} communautés retenues concernées.` });
   const snMissing = sel.filter((r) => r.Pays === "Sénégal" && r.POPULATION == null).length;
   if (snMissing) att.push({ c: "#e8a13a", t: `Population manquante pour ${snMissing} communautés sénégalaises retenues.` });
+  const gmMissing = sel.filter((r) => r.Pays === "Gambie" && r.POPULATION == null).length;
+  if (gmMissing) att.push({ c: "#e8a13a", t: `Population manquante pour ${gmMissing} communautés gambiennes retenues.` });
   const topB = byBureau.slice().sort((a, b) => b.s - a.s)[0];
   if (topB) {
     // Même seuil (5 points) que l'analyse territoriale de la section "Par bureau" : comparaison
@@ -849,7 +857,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                     <i style={{ background: x.c }} />{x.l}
                   </button>
                 ))}
-                {mode === "population" && <span style={{ color: "#a8752a" }}>· Gambie non disponible</span>}
+                {mode === "population" && <span style={{ color: "#a8752a" }}>· Gambie : estimation 2024</span>}
               </div>
             )}
             {showLandcover && (
@@ -1086,7 +1094,8 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
               <tr><td className="name">Distance moyenne au bureau</td><td><b>{gS.dist.toFixed(0)} km</b></td><td>{gN.dist.toFixed(0)} km</td></tr>
               <tr><td className="name">{withPrcc("PRCC terminé en 2020 ou après")}</td><td><b>{gS.recent.toFixed(0)} %</b></td><td>{gN.recent.toFixed(0)} %</td></tr>
               <tr><td className="name">Communautés proches (25 km), en moyenne</td><td><b>{gS.dens.toFixed(1)}</b></td><td>{gN.dens.toFixed(1)}</td></tr>
-              <tr><td className="name">Population moyenne <small>(Sénégal)</small></td><td><b>{gS.pop ? Math.round(gS.pop).toLocaleString("fr-FR") : "n/d"}</b> <small>n={gS.popN}</small></td><td>{gN.pop ? Math.round(gN.pop).toLocaleString("fr-FR") : "n/d"} <small>n={gN.popN}</small></td></tr>
+              <tr><td className="name">Population moyenne <small>(Sénégal)</small></td><td><b>{popSnS.avg ? Math.round(popSnS.avg).toLocaleString("fr-FR") : "n/d"}</b> <small>n={popSnS.n}</small></td><td>{popSnN.avg ? Math.round(popSnN.avg).toLocaleString("fr-FR") : "n/d"} <small>n={popSnN.n}</small></td></tr>
+              <tr><td className="name">Population moyenne <small>(Gambie, est. 2024)</small></td><td><b>{popGmS.avg ? Math.round(popGmS.avg).toLocaleString("fr-FR") : "n/d"}</b> <small>n={popGmS.n}</small></td><td>{popGmN.avg ? Math.round(popGmN.avg).toLocaleString("fr-FR") : "n/d"} <small>n={popGmN.n}</small></td></tr>
               <tr><td className="name">Langues distinctes</td><td><b>{gS.langs}</b></td><td>{gN.langs}</td></tr>
             </tbody>
           </table>
@@ -1101,7 +1110,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                 <p><b>Observation :</b> les {sel.length} communautés sélectionnées ont un score moyen de {gS.score.toFixed(1)}, contre {gN.score.toFixed(1)} pour les {nonsel.length} non sélectionnées, soit un écart de {ecartScore.toFixed(1)} points.</p>
                 <p><b>Ce que ça veut dire :</b> les deux groupes présentent des profils différents. Les communautés sélectionnées sont en moyenne plus proches des bureaux de coordination ({gS.dist.toFixed(0)} km contre {gN.dist.toFixed(0)} km), ont plus souvent un PRCC terminé en 2020 ou après ({gS.recent.toFixed(0)} % contre {gN.recent.toFixed(0)} %), et comptent davantage de communautés voisines dans un rayon de 25 km ({gS.dens.toFixed(1)} contre {gN.dens.toFixed(1)}).</p>
                 <p><b>Implication :</b> le classement produit donc une sélection nettement différenciée. Ces différences correspondent aux critères utilisés dans le calcul du score (distance au bureau, récence du PRCC, concentration locale). La sélection présente donc un profil nettement différent d'une sélection aléatoire.</p>
-                <p className="sp-retenir">🎯 <b>À retenir :</b> la ligne « Population moyenne » de ce tableau ne concerne que le Sénégal et seulement les communautés où cette donnée existe ({snPop} sur {snTot}, soit {popPct.toFixed(0)} % de la base sénégalaise). Elle ne doit pas être lue comme un indicateur du poids réel de la population dans le score : ce critère est pondéré à 0 % par défaut (réglable dans l'onglet Vue d'ensemble), et la donnée manque en plus pour toute la Gambie.</p>
+                <p className="sp-retenir">🎯 <b>À retenir :</b> les deux lignes « Population moyenne » ne portent que sur les communautés où cette donnée existe ({snPop} sur {snTot} au Sénégal, soit {popPct.toFixed(0)} % ; {gmPop} sur {gmTot} en Gambie, soit {pct(gmPop, gmTot).toFixed(0)} %). Pour la Gambie, ces valeurs sont une estimation 2024 (recensement 2013 ajusté à la croissance de chaque région), pas un comptage direct. Elles ne doivent pas être lues comme un indicateur du poids réel de la population dans le score : ce critère est pondéré à 0 % par défaut (réglable dans l'onglet Vue d'ensemble).</p>
               </Analyse>
             </div>
           );

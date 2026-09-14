@@ -99,7 +99,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
 
         <h2>6. Ce qu'il faut garder en tête</h2>
         <ul>
-          <li>La population n'est pas disponible pour la Gambie (100 %) et manque pour environ 40 % du Sénégal, d'où son poids à 0 %.</li>
+          <li>La population manque encore pour environ 38 % du Sénégal et 37 % de la Gambie, d'où son poids à 0 %. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
           <li>Environ 8 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
           <li>« Accès route » est une distance à vol d'oiseau, pas un temps de trajet réel (état de la piste, saison des pluies, cours d'eau à franchir ne sont pas pris en compte).</li>
           <li>La note est un <b>outil de classement relatif</b>, pas une note de qualité absolue : deux communautés de pays différents avec la même note peuvent avoir un statut différent, puisque le classement est fait pays par pays.</li>
