@@ -284,3 +284,9 @@ main>section+section{margin-top:24px}
 .grid2-main .lecture-card{border-radius:18px}
 .lecture-card .lecture-txt+.lecture-txt{margin-top:8px}
 .lecture-sub{color:#64748b;font-size:11.5px}
+.sp-corr-list{margin-top:8px;max-height:180px;overflow-y:auto;border:1px solid #dfe6ef;border-radius:9px}
+.sp-corr-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;font-size:11px;border-bottom:1px solid #eef1f5}
+.sp-corr-row:last-child{border-bottom:0}
+.sp-corr-nom{color:#354258;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-corr-undo{flex:none;border:0;background:none;color:#e11d48;font-size:10.5px;font-weight:600;cursor:pointer;padding:2px 4px}
+.sp-corr-undo:hover{text-decoration:underline}

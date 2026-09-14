@@ -543,6 +543,16 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
     } catch { /* fetch indisponible */ }
   }
 
+  // Annule une correction : le point revient à sa position d'origine (celle de communities.json,
+  // jamais modifiée par le mode correction lui-même — seule la suggestion locale est retirée).
+  function undoCorrection(code: string) {
+    setCorrections((prev) => {
+      const next = { ...prev };
+      delete next[code];
+      return next;
+    });
+  }
+
   function downloadCorrections() {
     const list = Object.values(corrections);
     if (!list.length) return;
@@ -965,6 +975,16 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
             <label className="toggle" style={{ display: "flex", gap: 7, marginTop: 6 }}><input type="checkbox" checked={correctionMode} onChange={(e) => setCorrectionMode(e.target.checked)} /> <Move size={13} /> Mode correction de position{Object.keys(corrections).length > 0 && <span style={{ marginLeft: 4, color: "#e11d48", fontWeight: 700 }}>{Object.keys(corrections).length}</span>}</label>
             {correctionMode && <p className="muted" style={{ marginTop: 4 }}>Glissez un point (rouge) vers sa vraie position. Chaque correction est enregistrée automatiquement et transmise à l'équipe data.</p>}
             {Object.keys(corrections).length > 0 && <button className="linkbtn" onClick={downloadCorrections}>⬇ Télécharger mes {Object.keys(corrections).length} correction(s) (CSV)</button>}
+            {correctionMode && Object.values(corrections).length > 0 && (
+              <div className="sp-corr-list">
+                {Object.values(corrections).sort((a, b) => b.ts - a.ts).map((c) => (
+                  <div className="sp-corr-row" key={c.code}>
+                    <span className="sp-corr-nom">{c.communaute}</span>
+                    <button type="button" className="sp-corr-undo" title="Annuler cette correction — le point revient à sa position d'origine" onClick={() => undoCorrection(c.code)}>↺ Annuler</button>
+                  </div>
+                ))}
+              </div>
+            )}
             {radiusTouched ? (
               <>
                 <div className="sp-result">
