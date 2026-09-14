@@ -35,7 +35,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         <p>Un quatrième critère, la <b>Population</b>, existe dans le modèle mais est <b>volontairement à 0 %</b> aujourd'hui :</p>
         <div className="callout">
           <b>Population</b>
-          <span>La donnée manque pour toute la Gambie et environ 40 % du Sénégal. L'inclure pénaliserait injustement les communautés sans chiffre.</span>
+          <span>La donnée manque encore pour environ 38 % du Sénégal et 37 % de la Gambie. L'inclure pénaliserait injustement les communautés sans chiffre. Pour la Gambie, faute de recensement village par village plus récent que 2013, les valeurs disponibles sont une <b>estimation 2024</b> (base 2013 ajustée à la croissance réelle de chaque région administrative) — indiqué « est. 2024 » dans chaque fiche concernée.</span>
         </div>
         <p>
           La durée du <Prcc /> n'est <b>pas</b> un critère : tous les <Prcc /> durent 3 ans. Les quelques valeurs
