@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { MapContainer, TileLayer, LayersControl, ImageOverlay, CircleMarker, Marker, Polyline, Circle, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, LayersControl, ImageOverlay, CircleMarker, Marker, Polyline, Circle, Tooltip, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Compass, Ruler, AlertTriangle, Building2, Languages, CircleDot, Move, Maximize2, Minimize2 } from "lucide-react";
 import type { Community } from "./App";
@@ -797,7 +797,8 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
         <div className="map-card" style={{ gridRow: "auto" }}>
           <div className="card-head"><div><h2>Carte analytique</h2><span>{mapRows.length} communautés affichées</span></div></div>
           <div className="map-wrap">
-            <MapContainer center={center} zoom={zoom} scrollWheelZoom>
+            <MapContainer center={center} zoom={zoom} scrollWheelZoom zoomControl={false}>
+              <ZoomControl position="topright" />
               <MapView center={center} zoom={zoom} />
               <FullscreenControl />
               <LayersControl position="topright">
