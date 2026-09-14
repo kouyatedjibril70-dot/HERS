@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { MapContainer, TileLayer, LayersControl, ImageOverlay, CircleMarker, Marker, Polyline, Circle, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Compass, Ruler, AlertTriangle, Building2, Languages, CircleDot, Move } from "lucide-react";
+import { Compass, Ruler, AlertTriangle, Building2, Languages, CircleDot, Move, Maximize2, Minimize2 } from "lucide-react";
 import type { Community } from "./App";
 import { LANG_COLORS } from "./palette";
 import { withPrcc, PRCC_TOOLTIP } from "./Prcc";
@@ -167,6 +167,30 @@ function MapView({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => { map.setView(center, zoom); }, [map, center[0], center[1], zoom]);
   return null;
+}
+
+// Bouton plein écran : agrandit la carte à toute la page pour repérer plus facilement les points
+// mal placés (ex. dans l'eau). S'appuie sur l'API Fullscreen native du navigateur, pas de plugin.
+function FullscreenControl() {
+  const map = useMap();
+  const [isFull, setIsFull] = useState(false);
+  useEffect(() => {
+    const onChange = () => {
+      setIsFull(document.fullscreenElement === map.getContainer());
+      setTimeout(() => map.invalidateSize(), 80);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, [map]);
+  const toggle = () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else map.getContainer().requestFullscreen?.();
+  };
+  return (
+    <button type="button" className="map-fullscreen-btn" onClick={toggle} title={isFull ? "Quitter le plein écran" : "Agrandir la carte en plein écran"}>
+      {isFull ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+    </button>
+  );
 }
 
 // Couche routes impérative : évite le bug "il faut cliquer deux fois" du <GeoJSON> de react-leaflet
@@ -775,6 +799,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
           <div className="map-wrap">
             <MapContainer center={center} zoom={zoom} scrollWheelZoom>
               <MapView center={center} zoom={zoom} />
+              <FullscreenControl />
               <LayersControl position="topright">
                 {BASEMAPS.map((b, i) => (
                   <LayersControl.BaseLayer key={b.name} name={b.name} checked={i === 0}>
