@@ -71,7 +71,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
               <tr><td>Les 10 % les plus proches</td><td>1,2 à 40 km</td><td><b>saré Madiw</b> : 7,2 km <b>soit 99,3 pts</b></td></tr>
               <tr><td>La médiane (milieu du classement)</td><td>environ 107 km</td><td>&nbsp;</td></tr>
               <tr><td>Les 10 % les plus éloignées</td><td>plus de 201 km</td><td>&nbsp;</td></tr>
-              <tr><td>La plus éloignée de toutes</td><td>424 km</td><td>&nbsp;</td></tr>
+              <tr><td>La plus éloignée de toutes</td><td>331 km</td><td>&nbsp;</td></tr>
             </tbody>
           </table>
         </div>
