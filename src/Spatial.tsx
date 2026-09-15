@@ -131,7 +131,6 @@ function modeValue(r: Community, mode: Mode): string | null {
 // NB : les tuiles Google (lyrs=…) ne sont pas officiellement supportées hors API Google — usage à titre pratique.
 export const BASEMAPS: { name: string; url: string; attribution: string; subdomains?: string; maxNativeZoom?: number }[] = [
   { name: "OpenStreetMap", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors" },
-  { name: "Carto clair", url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap, &copy; CARTO", subdomains: "abcd" },
   { name: "Esri Imagery (satellite)", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attribution: "Imagerie &copy; Esri, Maxar, Earthstar Geographics", maxNativeZoom: 19 },
   { name: "Esri Topo", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", attribution: "&copy; Esri", maxNativeZoom: 19 },
   { name: "OpenTopoMap", url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenTopoMap (CC-BY-SA)", maxNativeZoom: 17 },
