@@ -172,6 +172,18 @@ function MapView({ center, zoom }: { center: [number, number]; zoom: number }) {
   return null;
 }
 
+// Cadre la carte sur un ensemble de points (ex. un bureau + toutes ses communautés) plutôt que
+// sur un centre/zoom fixe — utilisé quand un bureau est choisi mais qu'aucun rayon n'est encore actif.
+function FitBounds({ points }: { points: [number, number][] }) {
+  const map = useMap();
+  const key = points.map((p) => p.join(",")).join("|");
+  useEffect(() => {
+    if (points.length) map.fitBounds(points, { padding: [40, 40], maxZoom: 11 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, key]);
+  return null;
+}
+
 // Bouton plein écran : agrandit la carte à toute la page pour repérer plus facilement les points
 // mal placés (ex. dans l'eau). S'appuie sur l'API Fullscreen native du navigateur, pas de plugin.
 function FullscreenControl() {
@@ -532,6 +544,9 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
   const [hiddenBuckets, setHiddenBuckets] = useState<Set<string>>(new Set());
   useEffect(() => { setHiddenBuckets(new Set()); }, [mode]);
   const [spBureau, setSpBureau] = useState("Kolda");
+  // Bureau choisi (indépendant du rayon) : un clic sur un bureau doit d'abord cadrer la carte sur lui et
+  // toutes ses communautés, sans tracer de rayon tant que l'utilisateur ne l'a pas activé lui-même.
+  const [bureauTouched, setBureauTouched] = useState(false);
   const [radius, setRadius] = useState(50);
   const [radiusOn, setRadiusOn] = useState(false);
   // Kolda/50 km ne sont que des valeurs de départ techniques (il faut bien initialiser le state) — tant que
@@ -639,20 +654,32 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
     () => rows.filter((r) => (r.selected ? showSel : showUnsel)),
     [rows, showSel, showUnsel],
   );
-  // Dès qu'un bureau + rayon est choisi, la carte se recentre sur ce sous-ensemble — sinon le
-  // choix d'un bureau n'avait aucun effet visible, seul le cercle de contour apparaissait.
+  // Un bureau seul (sans rayon actif) affiche TOUTES ses communautés, retenues et non retenues.
+  // Le rayon, une fois activé, restreint ensuite ce sous-ensemble à la zone choisie.
   const mapRows = useMemo(() => {
     let out = statusRows;
-    if (radiusTouched) out = out.filter((r) => inRadiusSet.has(keyOf(r)));
+    if (radiusOn) out = out.filter((r) => inRadiusSet.has(keyOf(r)));
+    else if (bureauTouched) out = out.filter((r) => r.Bureau === spBureau);
     if (isolateFar) out = out.filter((r) => farSet.has(keyOf(r)));
     // Filtre par légende (Score, Distance, Langue, etc.) — "statut" a déjà son propre système de
     // filtre (showSel/showUnsel) dans la légende flottante de la carte, pas de doublon ici pour lui.
     if (mode !== "statut" && hiddenBuckets.size > 0) out = out.filter((r) => !hiddenBuckets.has(bucketLabelFor(r, mode, langList)));
     return out;
-  }, [statusRows, radiusTouched, inRadiusSet, isolateFar, farSet, mode, hiddenBuckets, langList]);
+  }, [statusRows, radiusOn, inRadiusSet, bureauTouched, spBureau, isolateFar, farSet, mode, hiddenBuckets, langList]);
 
   const center: [number, number] = radiusOn ? BUREAUX[spBureau] : [14.0, -14.6];
   const zoom = radiusOn ? (radius <= 25 ? 9 : radius <= 60 ? 8 : 7) : 6;
+  // Points à cadrer quand un bureau est choisi sans rayon actif : le bureau lui-même + toutes ses
+  // communautés (retenues et non retenues), indépendamment des filtres de statut/légende en cours.
+  const bureauBounds = useMemo((): [number, number][] => {
+    if (!bureauTouched || radiusOn) return [];
+    const pts: [number, number][] = all
+      .filter((r) => r.Bureau === spBureau && Number.isFinite(Number(r["Latitude référence"])) && Number.isFinite(Number(r["Longitude référence"])))
+      .map((r) => [Number(r["Latitude référence"]), Number(r["Longitude référence"])]);
+    const b = BUREAUX[spBureau];
+    if (b) pts.push(b);
+    return pts;
+  }, [all, spBureau, bureauTouched, radiusOn]);
 
   // Couche des points communautés — mémoïsée : sans cela, chaque case à cocher du panneau
   // latéral reconstruit ~800 marqueurs et Leaflet « avale » le clic (il faut recliquer).
@@ -837,7 +864,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
           <div className="map-wrap">
             <MapContainer center={center} zoom={zoom} scrollWheelZoom zoomControl={false}>
               <ZoomControl position="topright" />
-              <MapView center={center} zoom={zoom} />
+              {bureauBounds.length ? <FitBounds points={bureauBounds} /> : <MapView center={center} zoom={zoom} />}
               <FullscreenControl />
               <LayersControl position="topright">
                 {BASEMAPS.map((b, i) => (
@@ -914,7 +941,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
               );
             })()}
             {/* Analyses en 4 temps des deux outils du panneau latéral — affichées sous la carte plutôt que sur le côté. */}
-            {radiusTouched && inRadius.length > 0 && (() => {
+            {radiusOn && inRadius.length > 0 && (() => {
               const retenues = inRadius.filter((r) => r.selected);
               const horsSel = inRadius.filter((r) => !r.selected);
               const tauxLocal = pct(retenues.length, inRadius.length);
@@ -992,11 +1019,12 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
               {Object.keys(BUREAUX).map((b) => (
                 <button
                   key={b}
-                  className={radiusTouched && spBureau === b ? "on" : ""}
+                  className={bureauTouched && spBureau === b ? "on" : ""}
                   onClick={() => {
                     // Recliquer sur le bureau déjà actif désélectionne (sinon impossible de revenir à "aucun choix").
-                    if (radiusTouched && spBureau === b) { setRadiusTouched(false); setRadiusOn(false); }
-                    else { setSpBureau(b); setRadiusOn(true); setRadiusTouched(true); }
+                    // Choisir un bureau cadre la carte sur lui, sans tracer de rayon : ça reste un choix à part.
+                    if (bureauTouched && spBureau === b) { setBureauTouched(false); setRadiusOn(false); setRadiusTouched(false); }
+                    else { setSpBureau(b); setBureauTouched(true); setRadiusOn(false); setRadiusTouched(false); }
                   }}
                 >{b}</button>
               ))}
@@ -1008,13 +1036,13 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                   className={radiusTouched && radius === k ? "on" : ""}
                   onClick={() => {
                     if (radiusTouched && radius === k) { setRadiusTouched(false); setRadiusOn(false); }
-                    else { setRadius(k); setRadiusOn(true); setRadiusTouched(true); }
+                    else { setRadius(k); setRadiusOn(true); setRadiusTouched(true); setBureauTouched(true); }
                   }}
                 >{k} km</button>
               ))}
             </div>
-            <input type="range" min={5} max={150} step={5} value={radius} onChange={(e) => { setRadius(Number(e.target.value)); setRadiusOn(true); setRadiusTouched(true); }} />
-            <label className="toggle" style={{ display: "flex", gap: 7 }}><input type="checkbox" checked={radiusOn} onChange={(e) => { setRadiusOn(e.target.checked); if (e.target.checked) setRadiusTouched(true); }} /> Tracer le rayon sur la carte</label>
+            <input type="range" min={5} max={150} step={5} value={radius} onChange={(e) => { setRadius(Number(e.target.value)); setRadiusOn(true); setRadiusTouched(true); setBureauTouched(true); }} />
+            <label className="toggle" style={{ display: "flex", gap: 7 }}><input type="checkbox" checked={radiusOn} onChange={(e) => { setRadiusOn(e.target.checked); if (e.target.checked) { setRadiusTouched(true); setBureauTouched(true); } }} /> Tracer le rayon sur la carte</label>
             <div className={"sp-layers" + (layersOpen ? " open" : "")}>
               <button type="button" className="sp-layers-head" onClick={() => setLayersOpen((v) => !v)}>
                 <span>Couches à superposer sur la carte{(() => { const n = [showRoads, showVilles, showMarches, showEau, showLandcover].filter(Boolean).length; return n > 0 ? <span className="sp-layers-count">{n}</span> : null; })()}</span>
@@ -1049,17 +1077,30 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
                 ))}
               </div>
             )}
-            {radiusTouched ? (
+            {radiusOn ? (
               <>
                 <div className="sp-result">
                   <div><b>{inRadius.length}</b>rattachées à {spBureau}, dans {radius} km</div>
                   <div><b>{inRadius.filter((r) => r.selected).length}</b>retenues</div>
                   <div><b>{inRadius.filter((r) => !r.selected).length}</b>hors sélection</div>
                 </div>
-                <button className="linkbtn" onClick={() => { setRadiusTouched(false); setRadiusOn(false); }}>✕ Réinitialiser (voir toutes les communautés)</button>
+                <button className="linkbtn" onClick={() => { setRadiusTouched(false); setRadiusOn(false); }}>✕ Désactiver le rayon (garder le bureau)</button>
               </>
-            ) : (
-              <p className="muted" style={{ marginTop: 8 }}>Choisissez un bureau et un rayon ci-dessus pour voir le résultat.</p>
+            ) : bureauTouched ? (() => {
+              const duBureau = all.filter((r) => r.Bureau === spBureau);
+              return (
+                <>
+                  <div className="sp-result">
+                    <div><b>{duBureau.length}</b>rattachées à {spBureau}</div>
+                    <div><b>{duBureau.filter((r) => r.selected).length}</b>retenues</div>
+                    <div><b>{duBureau.filter((r) => !r.selected).length}</b>hors sélection</div>
+                  </div>
+                  <p className="muted" style={{ marginTop: 8 }}>Choisissez un rayon ci-dessus pour restreindre à une zone autour de {spBureau}.</p>
+                  <button className="linkbtn" onClick={() => setBureauTouched(false)}>✕ Réinitialiser (voir toutes les communautés)</button>
+                </>
+              );
+            })() : (
+              <p className="muted" style={{ marginTop: 8 }}>Choisissez un bureau ci-dessus pour voir ses communautés.</p>
             )}
           </div>
 
