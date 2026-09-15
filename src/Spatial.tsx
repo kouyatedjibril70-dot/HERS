@@ -65,7 +65,7 @@ function jitter(seed: string): [number, number] {
   return [a * 0.018, b * 0.018];
 }
 
-type Mode = "statut" | "score" | "langue" | "distance" | "prcc" | "population" | "agri" | "route" | "marche" | "eau" | "ville";
+type Mode = "statut" | "score" | "langue" | "distance" | "prcc" | "population" | "couverture" | "agri" | "route" | "marche" | "eau" | "ville";
 
 // Distance à une ressource -> couleur (vert = proche/bon, rouge = loin).
 function distColor(d: number, b1: number, b2: number, b3: number): string {
@@ -83,6 +83,7 @@ function colorFor(r: Community, mode: Mode): string {
   if (mode === "marche") return distColor(num(r, "dist_marche_osm_km"), 10, 25, 50);
   if (mode === "eau") return distColor(num(r, "dist_eau_osm_km"), 2, 10, 25);
   if (mode === "ville") return distColor(num(r, "dist_ville_km"), 5, 15, 30);
+  if (mode === "couverture") return r.POPULATION !== null && r.POPULATION !== undefined ? "#2f9e6f" : "#d64550";
   const p = num(r, "POPULATION");
   if (!Number.isFinite(p)) return "#d7dee7";
   return p > 8000 ? "#1c4a86" : p > 3000 ? "#3d7ec0" : p > 1000 ? "#7ba7d4" : "#c3d4e6";
@@ -98,6 +99,7 @@ function legendFor(mode: Mode, langs: string[]): { c: string; l: string }[] {
   if (mode === "marche") return [{ c: "#2f9e6f", l: "10 km ou moins" }, { c: "#7bbf4f", l: "10 à 25" }, { c: "#e8a13a", l: "25 à 50" }, { c: "#d64550", l: "plus de 50" }];
   if (mode === "eau") return [{ c: "#2f9e6f", l: "2 km ou moins" }, { c: "#7bbf4f", l: "2 à 10" }, { c: "#e8a13a", l: "10 à 25" }, { c: "#d64550", l: "plus de 25" }];
   if (mode === "ville") return [{ c: "#2f9e6f", l: "5 km ou moins" }, { c: "#7bbf4f", l: "5 à 15" }, { c: "#e8a13a", l: "15 à 30" }, { c: "#d64550", l: "plus de 30" }];
+  if (mode === "couverture") return [{ c: "#2f9e6f", l: "Donnée disponible" }, { c: "#d64550", l: "Non renseignée" }];
   return [{ c: "#c3d4e6", l: "moins de 1 000" }, { c: "#7ba7d4", l: "1 000 à 3 000" }, { c: "#3d7ec0", l: "3 000 à 8 000" }, { c: "#1c4a86", l: "plus de 8 000" }, { c: "#d7dee7", l: "non renseignée" }];
 }
 
@@ -118,6 +120,7 @@ function modeValue(r: Community, mode: Mode): string | null {
   if (mode === "distance") { const v = num(r, "Distance bureau (km)"); return Number.isFinite(v) ? `bureau : ${v.toFixed(0)} km` : null; }
   if (mode === "score") return `score : ${r.score}/100`;
   if (mode === "population") { const v = num(r, "POPULATION"); return Number.isFinite(v) ? `population : ${v.toLocaleString("fr-FR")}` : "population : n/d"; }
+  if (mode === "couverture") return r.POPULATION !== null && r.POPULATION !== undefined ? "population : donnée disponible" : "population : non renseignée";
   if (mode === "agri") { const v = Number(r["pct_cultures_5km"]); return Number.isFinite(v) ? `cultures dans 5 km : ${v.toFixed(0)} %` : null; }
   if (mode === "route") { const v = Number(r["dist_route_km"]); return Number.isFinite(v) ? `route la plus proche : ${v.toFixed(1)} km` : null; }
   if (mode === "prcc") { const v = num(r, "Année Fin PRCC"); return Number.isFinite(v) ? `fin PRCC : ${v.toFixed(0)}` : null; }
@@ -391,6 +394,33 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
         : "La couverture est correcte sur ce sous-ensemble, mais la population reste à 0 % de pondération dans le score global pour rester cohérente sur l'ensemble de la base.",
       retenir: "Les zones grises sur la carte dans ce mode signalent une absence de donnée, pas une population nulle."
         + (gambieDansVue ? " Pour la Gambie, les valeurs affichées sont une estimation 2024 (recensement 2013 ajusté à la croissance de chaque région), pas un comptage direct." : ""),
+    };
+  }
+
+  if (mode === "couverture") {
+    const avecDonnee = rows.filter((r) => r.POPULATION !== null && r.POPULATION !== undefined).length;
+    const sansDonnee = n - avecDonnee;
+    const parRegion: Record<string, { n: number; pop: number }> = {};
+    rows.forEach((r) => {
+      const rg = String(r["Région"] || "").trim();
+      if (!rg) return;
+      parRegion[rg] = parRegion[rg] || { n: 0, pop: 0 };
+      parRegion[rg].n++;
+      if (r.POPULATION !== null && r.POPULATION !== undefined) parRegion[rg].pop++;
+    });
+    // Comparaison région par région seulement si au moins 2 régions ont un effectif assez grand
+    // pour qu'un pourcentage soit lisible (sinon une région à 3 communautés fausserait le constat).
+    const assezGrandes = Object.entries(parRegion).filter(([, v]) => v.n >= 10).map(([rg, v]) => ({ rg, n: v.n, couv: pct(v.pop, v.n) }));
+    let retenir = "Ce mode ne dit rien sur la taille de la population, seulement si la donnée existe ou non pour chaque communauté : utile pour repérer où concentrer un futur travail de recensement.";
+    if (assezGrandes.length >= 2) {
+      const pire = assezGrandes.slice().sort((a, b) => a.couv - b.couv)[0];
+      const top = assezGrandes.slice().sort((a, b) => b.couv - a.couv)[0];
+      retenir = `La couverture n'est pas uniforme sur le territoire : ${pire.rg} est la région la moins documentée de cette vue (${pire.couv.toFixed(0)} % sur ${pire.n} communautés), contre ${top.couv.toFixed(0)} % pour ${top.rg}. Comparer les régions dans « Par bureau / région » pour identifier où prioriser un futur recensement.`;
+    }
+    return {
+      observation: `Sur ${n} communautés affichées, ${cpt(avecDonnee, n)} ont une donnée de population disponible et ${cpt(sansDonnee, n)} n'en ont aucune.`,
+      lecture: "Ce mode distingue seulement la présence ou l'absence de la donnée, pas la taille des communautés : pour ça, voir le mode « Population ».",
+      retenir,
     };
   }
 
@@ -779,7 +809,7 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
   }
   att.push({ c: "#2f9e6f", t: `Score moyen des retenues ${gS.score.toFixed(1)} contre ${gN.score.toFixed(1)} hors sélection, soit un écart de ${(gS.score - gN.score).toFixed(1)} points.` });
 
-  const segs: [Mode, string][] = [["statut", "Statut"], ["score", "Score"], ["langue", "Langue"], ["distance", "Distance bureau"], ["prcc", "Fin PRCC"], ["population", "Population"], ["agri", "Potentiel agricole"], ["route", "Accès route"], ["marche", "Marché proche"], ["eau", "Point d'eau proche"], ["ville", "Ville proche"]];
+  const segs: [Mode, string][] = [["statut", "Statut"], ["score", "Score"], ["langue", "Langue"], ["distance", "Distance bureau"], ["prcc", "Fin PRCC"], ["population", "Population"], ["couverture", "Couverture population"], ["agri", "Potentiel agricole"], ["route", "Accès route"], ["marche", "Marché proche"], ["eau", "Point d'eau proche"], ["ville", "Ville proche"]];
 
   return (
     <section className="sp">
