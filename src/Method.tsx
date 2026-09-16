@@ -223,7 +223,11 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <li>
             Si une donnée manque pour une communauté, le critère concerné est simplement <b>retiré de sa moyenne</b> :
             la communauté n'est pas pénalisée. La fiche de détail affiche « Couverture des critères : X % » pour
-            indiquer quelle part du calcul a réellement pu être faite.
+            indiquer quelle part du calcul a réellement pu être faite. Exemple concret : <b>saré Madiw</b> (notre
+            exemple suivi plus haut) n'a pas de donnée de population. Si la Population était activée à 20 % de
+            poids (elle est à 0 % par défaut), sa fiche afficherait « Couverture des critères : 83 % » (3 critères
+            sur 4 disponibles), et sa note resterait calculée normalement sur ces 3 critères, 90,4/100, sans
+            pénalité liée à la donnée manquante.
           </li>
         </ol>
 
@@ -239,7 +243,9 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         <h2>5. Indicateurs de contexte (hors score)</h2>
         <p>
           Affichés sur la carte de l'onglet « Analyse spatiale » et dans la fiche de chaque communauté, mais
-          <b> n'entrant pas dans le calcul du score</b> :
+          <b> n'entrant pas dans le calcul du score</b> : ils servent à l'appréciation humaine de l'équipe
+          programme (anticiper les difficultés d'accès lors de la planification des visites terrain, évaluer
+          le potentiel agricole d'une zone…), pas à un calcul automatisé.
         </p>
         <h3>Potentiel agricole</h3>
         <p>
@@ -271,10 +277,23 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         <ul>
           <li>La population manque encore pour environ 38 % du Sénégal et 37 % de la Gambie, d'où son poids à 0 %. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
           <li>12 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
-          <li>« Accès route » est une distance à vol d'oiseau, pas un temps de trajet réel (état de la piste, saison des pluies, cours d'eau à franchir ne sont pas pris en compte).</li>
+          <li>« Accès route » est une distance à vol d'oiseau, pas un temps de trajet réel (état de la piste, saison des pluies, cours d'eau à franchir ne sont pas pris en compte). Le temps de trajet réel peut donc être nettement plus long que ce que suggère la distance, en particulier en saison des pluies.</li>
           <li>La note est un <b>outil de classement relatif</b>, pas une note de qualité absolue : deux communautés de pays différents avec la même note peuvent avoir un statut différent, puisque le classement est fait pays par pays.</li>
-          <li>Le critère « Distance au bureau » pesant 45 %, il est normal qu'une zone proche d'un bureau ait un fort taux de sélection : ce n'est pas un déséquilibre, c'est le modèle qui fonctionne comme prévu.</li>
+          <li>Le critère « Distance au bureau » pesant 45 %, il est normal qu'une zone proche d'un bureau ait un fort taux de sélection : ce n'est pas un déséquilibre, c'est le modèle qui fonctionne comme prévu. Ce poids est un choix du programme, pas une contrainte technique : il reste réglable dans l'onglet « Vue d'ensemble » si les priorités évoluent.</li>
         </ul>
+
+        <h2>7. Ce que ce modèle ne fait pas</h2>
+        <div className="callout warn">
+          <b>Limites à connaître</b>
+          <span>
+            Ce modèle classe les communautés, il ne mesure pas leur besoin réel : aucun indicateur de vulnérabilité
+            ou de pauvreté n'entre dans le score. Il ne compense pas non plus les inégalités géographiques : en
+            récompensant la proximité du bureau, il désavantage structurellement les zones reculées, même quand
+            leur potentiel agricole ou leur gouvernance locale sont solides. Enfin, 35 % du score (la récence du
+            PRCC) repose sur une donnée fournie telle quelle, qu'on ne peut pas vérifier de façon indépendante. Ce
+            sont des choix et des limites assumés, pas des angles morts cachés.
+          </span>
+        </div>
 
         <p className="method-foot">
           Cette page décrit la mécanique du choix. Les chiffres exacts (nombre de communautés, objectifs, poids)
