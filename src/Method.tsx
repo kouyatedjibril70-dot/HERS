@@ -69,7 +69,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             <thead><tr><th>Position dans le classement</th><th>Distance bureau correspondante</th><th>Exemple réel</th></tr></thead>
             <tbody>
               <tr><td>Les 10 % les plus proches</td><td>1,2 à 40 km</td><td><b>saré Madiw</b> : 7,2 km <b>soit 99,3 pts</b></td></tr>
-              <tr><td>La médiane (milieu du classement)</td><td>environ 107 km</td><td>&nbsp;</td></tr>
+              <tr><td>La médiane (milieu du classement)</td><td>environ 106 km</td><td>&nbsp;</td></tr>
               <tr><td>Les 10 % les plus éloignées</td><td>plus de 201 km</td><td>&nbsp;</td></tr>
               <tr><td>La plus éloignée de toutes</td><td>331 km</td><td>&nbsp;</td></tr>
             </tbody>
@@ -136,7 +136,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             <thead><tr><th>Position dans le classement</th><th>Nombre de voisines correspondant</th><th>Exemple réel</th></tr></thead>
             <tbody>
               <tr><td>Les 10 % les plus denses</td><td>60 voisines ou plus</td><td>&nbsp;</td></tr>
-              <tr><td>La médiane (milieu du classement)</td><td>26 voisines</td><td><b>saré Madiw</b> : 47 voisines <b>soit 78,9 pts</b></td></tr>
+              <tr><td>La médiane (milieu du classement)</td><td>26 voisines</td><td><b>saré Madiw</b> : 47 voisines <b>soit 79,1 pts</b></td></tr>
               <tr><td>Les 10 % les plus isolées</td><td>9 voisines ou moins</td><td>&nbsp;</td></tr>
               <tr><td>La plus isolée de toutes</td><td>0 voisine</td><td>&nbsp;</td></tr>
             </tbody>
@@ -204,7 +204,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             période), estimation 2024 : <b>325 habitants</b>, indiqué « est. 2024 » dans sa fiche.
           </li>
           <li>
-            <b>Communautés restantes (433 au Sénégal, 87 en Gambie) :</b> aucune valeur fiable trouvée. Deux méthodes
+            <b>Communautés restantes (432 au Sénégal, 87 en Gambie) :</b> aucune valeur fiable trouvée. Deux méthodes
             alternatives ont été testées pour combler ce manque, densité de population par satellite, puis moyenne
             des communes voisines, et toutes deux se sont révélées trop imprécises pour remplacer une vraie mesure
             (erreur médiane d'environ 70 % par rapport à des valeurs connues). Nous avons préféré laisser ces
@@ -270,7 +270,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         <h2>6. Ce qu'il faut garder en tête</h2>
         <ul>
           <li>La population manque encore pour environ 38 % du Sénégal et 37 % de la Gambie, d'où son poids à 0 %. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
-          <li>15 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
+          <li>12 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
           <li>« Accès route » est une distance à vol d'oiseau, pas un temps de trajet réel (état de la piste, saison des pluies, cours d'eau à franchir ne sont pas pris en compte).</li>
           <li>La note est un <b>outil de classement relatif</b>, pas une note de qualité absolue : deux communautés de pays différents avec la même note peuvent avoir un statut différent, puisque le classement est fait pays par pays.</li>
           <li>Le critère « Distance au bureau » pesant 45 %, il est normal qu'une zone proche d'un bureau ait un fort taux de sélection : ce n'est pas un déséquilibre, c'est le modèle qui fonctionne comme prévu.</li>
