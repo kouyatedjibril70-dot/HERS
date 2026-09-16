@@ -1,10 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// En production (npm run build → GitHub Pages), le site vit dans le sous-dossier /HERS/ :
-// https://kouyatedjibril70-dot.github.io/HERS/
-// En dev local (npm run dev), on reste à la racine "/" pour la commodité.
+// GitHub Pages sert le site depuis le sous-dossier /HERS/ (https://…github.io/HERS/), alors que
+// Cloudflare Pages le sert depuis la racine de son propre domaine (…pages.dev/). CF_PAGES est une
+// variable d'environnement posée automatiquement par Cloudflare pendant son build : elle permet de
+// distinguer les deux sans rien casser côté GitHub Pages. En dev local, on reste à la racine "/".
 export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/HERS/" : "/",
+  base: command === "build" && !process.env.CF_PAGES ? "/HERS/" : "/",
   plugins: [react()],
 }));
