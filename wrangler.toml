@@ -1,4 +1,4 @@
-name = "hers-community-platform"
+name = "hers"
 compatibility_date = "2024-09-23"
 
 # Site 100% statique (aucun code de Worker) : on sert directement le résultat du build Vite.
