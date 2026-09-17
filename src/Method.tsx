@@ -276,7 +276,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         <h2>6. Ce qu'il faut garder en tête</h2>
         <ul>
           <li>La population manque encore pour environ 38 % du Sénégal et 37 % de la Gambie, d'où son poids à 0 %. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
-          <li>12 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
+          <li>14 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
           <li>« Accès route » est une distance à vol d'oiseau, pas un temps de trajet réel (état de la piste, saison des pluies, cours d'eau à franchir ne sont pas pris en compte). Le temps de trajet réel peut donc être nettement plus long que ce que suggère la distance, en particulier en saison des pluies.</li>
           <li>La note est un <b>outil de classement relatif</b>, pas une note de qualité absolue : deux communautés de pays différents avec la même note peuvent avoir un statut différent, puisque le classement est fait pays par pays.</li>
           <li>Le critère « Distance au bureau » pesant 45 %, il est normal qu'une zone proche d'un bureau ait un fort taux de sélection : ce n'est pas un déséquilibre, c'est le modèle qui fonctionne comme prévu. Ce poids est un choix du programme, pas une contrainte technique : il reste réglable dans l'onglet « Vue d'ensemble » si les priorités évoluent.</li>
