@@ -278,9 +278,13 @@ export default function App(){
  // cet élément quand le plein écran est actif, sinon rien ne s'affiche au clic sur un point en plein écran.
  const [fsEl,setFsEl]=useState<Element|null>(null);
  useEffect(()=>{const h=()=>setFsEl(document.fullscreenElement);document.addEventListener("fullscreenchange",h);return()=>document.removeEventListener("fullscreenchange",h);},[]);
+ // Sur mobile la barre d'onglets défile horizontalement (4 onglets ne tiennent pas sur un écran de téléphone) :
+ // sans ceci, taper un onglet situé hors champ le laisse coupé au bord après le défilement manuel.
+ const tabstripRef=useRef<HTMLElement>(null);
  const [targets,setTargets]=useState({Sénégal:642,Gambie:161}),[weights,setWeights]=useState(urlInit.weights);
  const [toast,setToast]=useState(false);const firstW=useRef(true);
  useEffect(()=>{if(firstW.current){firstW.current=false;return;}setToast(true);const id=window.setTimeout(()=>setToast(false),1600);return ()=>window.clearTimeout(id);},[weights]);
+ useEffect(()=>{tabstripRef.current?.querySelector(".active")?.scrollIntoView({inline:"nearest",block:"nearest",behavior:"smooth"});},[tab]);
  useEffect(()=>{writeUrlState({tab,country,region,lang,bureau,query,only,weights});},[tab,country,region,lang,bureau,query,only,weights]);
  useEffect(()=>{if(tab==="spatial"){setRegion("Toutes");setLang("Toutes");setBureau("Tous");}},[tab]);
  const base=useMemo(()=>scoreAll(communitiesIndexed,weights),[weights]);
@@ -289,7 +293,7 @@ export default function App(){
  const filtered=data.filter(r=>(country==="Tous"||r.Pays===country)&&(region==="Toutes"||r.Région===region)&&(lang==="Toutes"||r["Langue normalisée"]===lang)&&(bureau==="Tous"||r.Bureau===bureau)&&(!only||r.selected)&&(!query||String(r.Communauté).toLowerCase().includes(query.toLowerCase())||String(r["code communaute"]).toLowerCase().includes(query.toLowerCase())));
  const mapRows=filtered.filter(r=>r.selected?showSel:showUnsel);
  const center:[number,number]=country==="Gambie"?[13.45,-15.2]:[14.2,-14.7];
- return <div className="app"><div className="chrome"><div className="topbar"><div className="brand"><div className="logo">H</div><div><b>HERS · Sélection des communautés pilotes</b><span>Tableau de bord géospatial · Sénégal &amp; Gambie</span><span className="brand-meta">{base.length} communautés · 5 bureaux</span></div></div><nav className="tabstrip"><button className={tab==="dashboard"?"active":""} onClick={()=>setTab("dashboard")}><BarChart3 size={18}/>Vue d'ensemble</button><button className={tab==="communities"?"active":""} onClick={()=>setTab("communities")}><Users size={18}/>Communautés</button><button className={tab==="spatial"?"active":""} onClick={()=>setTab("spatial")}><MapIcon size={18}/>Analyse spatiale</button><button className={tab==="method"?"active":""} onClick={()=>setTab("method")}><FileText size={18}/>Méthode</button></nav><div className="topbar-actions"><div className="consult-pill"><span>Consultations</span><strong><CountUp value={targets.Sénégal+targets.Gambie}/></strong><small>{targets.Sénégal} Sénégal · {targets.Gambie} Gambie</small></div></div></div></div>
+ return <div className="app"><div className="chrome"><div className="topbar"><div className="brand"><div className="logo">H</div><div><b>HERS · Sélection des communautés pilotes</b><span>Tableau de bord géospatial · Sénégal &amp; Gambie</span><span className="brand-meta">{base.length} communautés · 5 bureaux</span></div></div><nav className="tabstrip" ref={tabstripRef}><button className={tab==="dashboard"?"active":""} onClick={()=>setTab("dashboard")}><BarChart3 size={18}/>Vue d'ensemble</button><button className={tab==="communities"?"active":""} onClick={()=>setTab("communities")}><Users size={18}/>Communautés</button><button className={tab==="spatial"?"active":""} onClick={()=>setTab("spatial")}><MapIcon size={18}/>Analyse spatiale</button><button className={tab==="method"?"active":""} onClick={()=>setTab("method")}><FileText size={18}/>Méthode</button></nav><div className="topbar-actions"><div className="consult-pill"><span>Consultations</span><strong><CountUp value={targets.Sénégal+targets.Gambie}/></strong><small>{targets.Sénégal} Sénégal · {targets.Gambie} Gambie</small></div></div></div></div>
  <main>
  {tab!=="spatial"&&tab!=="method"&&<Stats data={data} targets={targets}/>}
  {tab!=="communities"&&tab!=="method"&&<>
