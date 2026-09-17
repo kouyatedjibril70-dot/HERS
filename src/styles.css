@@ -145,6 +145,7 @@ main>section+section{margin-top:24px}
 .tabstrip button:hover{background:rgba(255,255,255,.08);color:#e2e8f0}
 .tabstrip button.active{background:rgba(255,255,255,.13);color:#fff;font-weight:600}
 .tabstrip button.active svg{color:#93c5fd}
+@media(max-width:700px),(max-height:480px){.tabstrip{overflow-x:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch}}
 
 /* --- 6. Carte des communautés --- */
 .map-wrap{position:relative;border-radius:12px;overflow:hidden;box-shadow:inset 0 0 0 1px #e2e8f0}
