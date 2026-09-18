@@ -147,7 +147,6 @@ const LANDCOVER_BOUNDS: [[number, number], [number, number]] = [[12.1995, -17.60
 // --- Mode correction de position : envoi vers un Google Sheet (Apps Script Web App) + sauvegarde locale ---
 const CORRECTIONS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz368CZ9huD-OLWTw3ip-VKx-v-sZhYddNGezpjhOHraThkiPp7aJdV7Fw7A6DuS_xtEg/exec";
 const CORRECTIONS_KEY = "hers_corrections_v1";
-const ADMIN_KEY = "hers_admin_v1";
 type Correction = { code: string; communaute: string; lat: number; lon: number; oldLat: number; oldLon: number; ts: number };
 // Deux icônes : discrète pour les points "juste déplaçables" (l'immense majorité — pas d'erreur
 // connue, on garde juste la main pour corriger au besoin), voyante seulement pour ceux déjà corrigés.
@@ -532,11 +531,12 @@ function Analyse({ title, children }: { title: ReactNode; children: ReactNode })
   );
 }
 
-export default function Spatial({ all, rows, onSelect, onBureau }: {
+export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
   all: Community[];
   rows: Community[];
   onSelect: (r: Community) => void;
   onBureau: (b: string) => void;
+  isAdmin: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("statut");
   // Buckets de légende masqués pour le mode de coloration courant (Score, Langue, Distance, etc.) —
@@ -568,18 +568,6 @@ export default function Spatial({ all, rows, onSelect, onBureau }: {
   const [showEau, setShowEau] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false); // panneau « Couches à superposer » replié par défaut
   const [correctionMode, setCorrectionMode] = useState(false);
-  // Outils réservés à la mise à jour des coordonnées (correction manuelle, comparaison Tableau Public) :
-  // pas destinés aux visiteurs de la plateforme. Visite une fois avec ?cle=hers-admin-2026 dans l'URL
-  // pour les activer durablement sur cet appareil (mémorisé en localStorage, pas de vrai compte).
-  const [isAdmin] = useState(() => {
-    try {
-      if (new URLSearchParams(window.location.search).get("cle") === "hers-admin-2026") {
-        localStorage.setItem(ADMIN_KEY, "1");
-        return true;
-      }
-      return localStorage.getItem(ADMIN_KEY) === "1";
-    } catch { return false; }
-  });
   const [corrections, setCorrections] = useState<Record<string, Correction>>(() => {
     try { return JSON.parse(localStorage.getItem(CORRECTIONS_KEY) || "{}"); } catch { return {}; }
   });
