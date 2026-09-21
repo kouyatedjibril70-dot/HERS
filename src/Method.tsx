@@ -290,8 +290,14 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         <p>
           Limites à connaître : la couverture d'OpenStreetMap est bonne pour les villes et l'eau de surface, mais
           <b> partielle pour les marchés hebdomadaires ruraux et les puits</b>. Un marché ou un puits proche non
-          cartographié peut faire apparaître une distance plus grande que la réalité. À terme, « accès marché »
-          sera remplacé par la distance aux 7 centres de collecte HERS, une fois ceux-ci implantés.
+          cartographié peut faire apparaître une distance plus grande que la réalité. Et même quand un point est bien
+          cartographié, la distance seule ne dit rien de sa <b>qualité réelle</b> : pour un marché, rien n'indique
+          s'il est encore actif, s'il est hebdomadaire ou permanent, s'il reste accessible pendant l'hivernage, ni
+          s'il est effectivement fréquenté par la communauté ; pour un point d'eau, rien n'indique s'il est
+          fonctionnel ni disponible toute l'année. C'est pour ces raisons que ces deux indicateurs restent des
+          <b> indicateurs de contexte et non des critères de score</b> : ils pourront être réévalués comme critères
+          une fois vérifiés ou complétés, par exemple lors de la phase de validation terrain. À terme, « accès
+          marché » sera remplacé par la distance aux 7 centres de collecte HERS, une fois ceux-ci implantés.
         </p>
 
         <h2>6. Ce qu'il faut garder en tête</h2>
