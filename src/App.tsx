@@ -229,7 +229,7 @@ function CommunitiesTable({ rows, onSelect, preset }: { rows: Community[]; onSel
   };
   const SortIc = ({ k }: { k: string }) => sortKey !== k ? <ArrowUpDown size={12} className="sort-ic" /> : sortDir === "asc" ? <ArrowUp size={12} className="sort-ic on" /> : <ArrowDown size={12} className="sort-ic on" />;
 
-  const shown = view.slice(0, 300);
+  const shown = view;
   return (
     <div className="ctable-wrap">
       <table className="ctable">
@@ -273,7 +273,7 @@ function CommunitiesTable({ rows, onSelect, preset }: { rows: Community[]; onSel
           ))}
         </tbody>
       </table>
-      <p className="footnote" style={{ padding: "8px 12px 0" }}>{view.length} résultat(s) · 300 lignes affichées au maximum. Cliquez une en-tête pour trier, utilisez les champs sous les titres pour filtrer.</p>
+      <p className="footnote" style={{ padding: "8px 12px 0" }}>{view.length} résultat(s) affiché(s). Cliquez une en-tête pour trier, utilisez les champs sous les titres pour filtrer.</p>
     </div>
   );
 }
