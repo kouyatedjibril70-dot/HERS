@@ -19,6 +19,14 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           sont ensuite classées par note, <b>séparément pour le Sénégal et pour la Gambie</b>, et on retient les
           mieux classées de chaque pays jusqu'à atteindre l'objectif fixé par le programme.
         </p>
+        <p>
+          <b>Condition d'éligibilité préalable.</b> Seules les communautés dont le <Prcc /> a démarré <b>en 2010 ou
+          après</b> entrent dans ce classement : ce n'est pas un critère parmi d'autres qui les désavantagerait,
+          elles sont <b>retirées de la base</b> avant tout calcul, au même titre qu'une communauté qui n'existerait
+          pas. 425 communautés (toutes au Sénégal, <Prcc /> démarré en 2007, 2008 ou 2009) sont exclues de cette
+          façon. La base réellement analysée par la plateforme compte donc <b>946 communautés</b> (713 au Sénégal,
+          233 en Gambie), et non 1 371.
+        </p>
 
         <h2>2. Les critères, en détail</h2>
         <div className="method-table">
@@ -32,7 +40,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             </tbody>
           </table>
         </div>
-        <p className="method-note">Poids par défaut, réglables en direct dans l'onglet <b>Vue d'ensemble</b>, sans toucher au nombre de communautés retenues.</p>
+        <p className="method-note">Ce sont les valeurs <b>actuellement affichées</b>, un point de départ proposé pour la discussion, pas un choix figé. Elles sont réglables en direct dans l'onglet <b>Vue d'ensemble</b> : la note, le rang et la liste de la page « Communautés » se recalculent alors instantanément, partout dans la plateforme, sans toucher au nombre de communautés retenues.</p>
 
         <p>
           Ce qui suit détaille, critère par critère : pourquoi il a été choisi, pourquoi il pèse ce qu'il pèse, comment
@@ -62,24 +70,24 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <b>Comment le chiffre brut devient une note (certain, c'est du calcul).</b> On ne compare pas les distances
           en absolu, mais la <b>position</b> de chaque communauté par rapport à toutes les autres de son pays : si
           elle fait partie des plus proches d'un bureau, elle est proche de 100 points ; si elle est parmi les plus
-          éloignées, proche de 0. Ce que ça donne concrètement au Sénégal (1138 communautés) :
+          éloignées, proche de 0. Ce que ça donne concrètement au Sénégal (713 communautés éligibles) :
         </p>
         <div className="method-table">
           <table>
             <thead><tr><th>Position dans le classement</th><th>Distance bureau correspondante</th><th>Exemple réel</th></tr></thead>
             <tbody>
-              <tr><td>Les 10 % les plus proches</td><td>1,2 à 40 km</td><td><b>saré Madiw</b> : 7,2 km <b>soit 99,3 pts</b></td></tr>
-              <tr><td>La médiane (milieu du classement)</td><td>environ 106 km</td><td>&nbsp;</td></tr>
-              <tr><td>Les 10 % les plus éloignées</td><td>plus de 201 km</td><td>&nbsp;</td></tr>
-              <tr><td>La plus éloignée de toutes</td><td>331 km</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus proches</td><td>36 km ou moins</td><td><b>saré Madiw</b> : 7,2 km <b>soit 99,2 pts</b></td></tr>
+              <tr><td>La médiane (milieu du classement)</td><td>environ 93 km</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus éloignées</td><td>plus de 177 km</td><td>&nbsp;</td></tr>
+              <tr><td>La plus éloignée de toutes</td><td>275 km</td><td>&nbsp;</td></tr>
             </tbody>
           </table>
         </div>
         <p>
           <b>D'où vient le chiffre brut « Distance bureau (km) » (vérifié, pas supposé).</b> Ce chiffre est calculé par
           la plateforme elle-même : distance à vol d'oiseau entre les coordonnées GPS de la communauté et celles du
-          bureau auquel elle est rattachée. Recalculé indépendamment et comparé au chiffre enregistré pour les 1371
-          communautés de la base : <b>correspondance à 100 %, aucun écart.</b>
+          bureau auquel elle est rattachée. Recalculé indépendamment et comparé au chiffre enregistré pour les 946
+          communautés éligibles : <b>correspondance à 100 %, aucun écart.</b>
         </p>
 
         <h3>Critère 2 : Récence de la fin du <Prcc /> (35 points sur 100)</h3>
@@ -101,9 +109,9 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <table>
             <thead><tr><th>Position dans le classement</th><th>Année de fin correspondante</th><th>Exemple réel</th></tr></thead>
             <tbody>
-              <tr><td>Les 10 % les plus récentes</td><td>2023 ou plus tard</td><td><b>saré Madiw</b> : fin 2023 <b>soit 85,6 pts</b></td></tr>
-              <tr><td>La médiane (milieu du classement)</td><td>2012</td><td>&nbsp;</td></tr>
-              <tr><td>Les 10 % les plus anciennes</td><td>2010</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus récentes</td><td>2023 ou plus tard</td><td><b>saré Madiw</b> : fin 2023 <b>soit 77,0 pts</b></td></tr>
+              <tr><td>La médiane (milieu du classement)</td><td>2015</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus anciennes</td><td>2012</td><td>&nbsp;</td></tr>
               <tr><td>La plus récente de toutes</td><td>2028 (<Prcc /> en cours, fin prévue)</td><td>&nbsp;</td></tr>
             </tbody>
           </table>
@@ -112,20 +120,32 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <b>D'où vient le chiffre brut (limite honnête à connaître).</b> Contrairement à la distance et à la
           densité, cette donnée est fournie telle quelle dans la base d'origine du programme : elle n'est pas
           calculée par la plateforme, donc elle ne peut pas être recalculée ni vérifiée de façon indépendante. Le
-          score utilise uniquement <b>l'année de fin</b> de chaque <Prcc />, qui dure toujours 3 ans par construction
-          du programme.
+          score utilise uniquement <b>l'année de fin</b> de chaque <Prcc />.
         </p>
 
         <h3>Critère 3 : Concentration de communautés voisines, rayon 25 km (20 points sur 100)</h3>
         <p>
-          <b>Pourquoi ce critère ?</b> Une communauté qui a beaucoup d'autres communautés du programme autour d'elle
-          permet de regrouper les déplacements et les visites de suivi : une même tournée de terrain peut couvrir
-          plusieurs communautés, ce qui réduit le coût de suivi par communauté.
+          <b>Ce que ce critère est censé mesurer, à l'origine.</b> L'idée du programme est d'éviter de sélectionner
+          des communautés <b>isolées</b>, sans aucun village voisin avec qui collaborer : chaque communauté
+          sélectionnée devrait pouvoir « adopter » un village <b>non-PRCC</b> proche, et plus ce village adopté est
+          proche, mieux c'est. Ce n'est pas un critère d'efficacité de tournée, ni lié à la concentration de
+          communautés PRCC dans une même zone.
+        </p>
+        <p>
+          <b>Ce qui est réellement calculé aujourd'hui (limite de données à connaître).</b> Aucune des 946
+          communautés de la base n'a le statut <Prcc /> « Non » : la base ne contient, par construction, que des
+          communautés déjà PRCC. Il est donc actuellement impossible de calculer une distance à un village non-PRCC.
+          Ce qui est mesuré à la place est un indicateur proche mais différent : le nombre <b>d'autres communautés
+          PRCC</b> (donc déjà dans le programme) présentes dans un rayon de 25 km — un indicateur de regroupement, qui
+          a sa propre utilité (une tournée de terrain peut couvrir plusieurs communautés proches), mais qui n'est pas
+          équivalent au critère de non-isolement voulu à l'origine. Recalculer le critère tel qu'initialement prévu
+          demanderait une base de villages non-PRCC géolocalisés, qui n'existe pas encore dans les données du
+          programme pour la Gambie (elle existe en partie pour le Sénégal).
         </p>
         <p>
           <b>Pourquoi 20 points, soit 20 % du score total ?</b> C'est un critère complémentaire à la distance au
           bureau (accès individuel) et à la récence du <Prcc /> (état du lien avec le programme) : il ajoute une
-          dimension d'efficacité de tournée sans dominer le classement.
+          dimension de regroupement/proximité sans dominer le classement.
         </p>
         <p>
           <b>Comment le chiffre brut devient une note (certain).</b> Même principe : la communauté avec le plus de
@@ -135,9 +155,9 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <table>
             <thead><tr><th>Position dans le classement</th><th>Nombre de voisines correspondant</th><th>Exemple réel</th></tr></thead>
             <tbody>
-              <tr><td>Les 10 % les plus denses</td><td>60 voisines ou plus</td><td>&nbsp;</td></tr>
-              <tr><td>La médiane (milieu du classement)</td><td>26 voisines</td><td><b>saré Madiw</b> : 47 voisines <b>soit 79,1 pts</b></td></tr>
-              <tr><td>Les 10 % les plus isolées</td><td>9 voisines ou moins</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus denses</td><td>50 voisines ou plus</td><td>&nbsp;</td></tr>
+              <tr><td>La médiane (milieu du classement)</td><td>24 voisines</td><td><b>saré Madiw</b> : 45 voisines <b>soit 78,8 pts</b></td></tr>
+              <tr><td>Les 10 % les plus isolées</td><td>8 voisines ou moins</td><td>&nbsp;</td></tr>
               <tr><td>La plus isolée de toutes</td><td>0 voisine</td><td>&nbsp;</td></tr>
             </tbody>
           </table>
@@ -146,8 +166,9 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <b>D'où vient le chiffre brut « Autres communautés dans 25 km » (vérifié, pas supposé).</b> Ce chiffre était
           déjà présent dans les données avant ce projet, sans script permettant de savoir comment il avait été
           calculé à l'origine. Il a donc été recalculé indépendamment : distance à vol d'oiseau entre chaque paire de
-          communautés, à partir des coordonnées actuelles, comptée si elle est de 25 km ou moins. Comparé au chiffre
-          enregistré pour les 1371 communautés : <b>correspondance à 100 %, aucun écart.</b> Ça n'a pas toujours été
+          communautés, à partir des coordonnées actuelles, comptée si elle est de 25 km ou moins (et uniquement entre
+          communautés éligibles, depuis l'exclusion des <Prcc /> antérieurs à 2010). Comparé au chiffre enregistré
+          pour les 946 communautés éligibles : <b>correspondance à 100 %, aucun écart.</b> Ça n'a pas toujours été
           le cas : un premier contrôle avait révélé un écart sur 23 % des communautés, concentré sur celles dont la
           position GPS avait été corrigée depuis. Ce champ est désormais recalculé automatiquement à chaque
           correction de position, pour rester exact en continu.
@@ -160,7 +181,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           pertinent en principe, prévu dès la conception de l'outil.
         </p>
         <p>
-          <b>Pourquoi 0 point aujourd'hui ?</b> La donnée manque pour une part importante de la base : <b>38 %</b> des
+          <b>Pourquoi 0 point aujourd'hui ?</b> La donnée manque pour une part importante de la base : <b>39 %</b> des
           communautés sénégalaises et <b>37 %</b> des communautés gambiennes n'ont aucun chiffre de population.
           Activer ce critère pénaliserait mécaniquement les communautés sans donnée, sans que ce soit un jugement sur
           leur taille réelle. Le poids reste à 0 % par défaut, mais il est réglable dans l'onglet « Vue d'ensemble » si
@@ -168,16 +189,16 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         </p>
         <p>
           <b>Comment le chiffre brut deviendrait une note si le critère était activé (certain, c'est le même
-          mécanisme).</b> Même principe de position relative que les trois critères précédents. Sur les 706
+          mécanisme).</b> Même principe de position relative que les trois critères précédents. Sur les 433
           communautés sénégalaises où la population est connue :
         </p>
         <div className="method-table">
           <table>
             <thead><tr><th>Position dans le classement</th><th>Population correspondante</th><th>Exemple réel</th></tr></thead>
             <tbody>
-              <tr><td>Les 10 % les plus peuplées</td><td>1 863 habitants ou plus</td><td><b>LOUBAL BALADJI</b> (Oréfondé) : 3 516 hab. <b>soit 95,6 pts</b></td></tr>
-              <tr><td>La médiane (milieu du classement)</td><td>450 habitants</td><td>&nbsp;</td></tr>
-              <tr><td>Les 10 % les moins peuplées</td><td>134 habitants ou moins</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus peuplées</td><td>1 366 habitants ou plus</td><td><b>LOUBAL BALADJI</b> (Oréfondé) : 3 516 hab. <b>soit 96,8 pts</b></td></tr>
+              <tr><td>La médiane (milieu du classement)</td><td>369 habitants</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les moins peuplées</td><td>106 habitants ou moins</td><td>&nbsp;</td></tr>
               <tr><td>La moins peuplée connue</td><td>7 habitants</td><td>&nbsp;</td></tr>
             </tbody>
           </table>
@@ -192,7 +213,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
         </p>
         <ul>
           <li>
-            <b>Sénégal (706 communautés sur 1138, soit 62 %) :</b> recensement RGPH 2023 (ANSD), apparié au nom exact
+            <b>Sénégal (433 communautés sur 713, soit 61 %) :</b> recensement RGPH 2023 (ANSD), apparié au nom exact
             du village. Exemple : <i>LOUBAL BALADJI</i>, commune d'Oréfondé, 3 516 habitants, une valeur directement
             recensée, pas une estimation.
           </li>
@@ -204,7 +225,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             période), estimation 2024 : <b>325 habitants</b>, indiqué « est. 2024 » dans sa fiche.
           </li>
           <li>
-            <b>Communautés restantes (432 au Sénégal, 87 en Gambie) :</b> aucune valeur fiable trouvée. Deux méthodes
+            <b>Communautés restantes (280 au Sénégal, 87 en Gambie) :</b> aucune valeur fiable trouvée. Deux méthodes
             alternatives ont été testées pour combler ce manque, densité de population par satellite, puis moyenne
             des communes voisines, et toutes deux se sont révélées trop imprécises pour remplacer une vraie mesure
             (erreur médiane d'environ 70 % par rapport à des valeurs connues). Nous avons préféré laisser ces
@@ -226,7 +247,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             indiquer quelle part du calcul a réellement pu être faite. Exemple concret : <b>saré Madiw</b> (notre
             exemple suivi plus haut) n'a pas de donnée de population. Si la Population était activée à 20 % de
             poids (elle est à 0 % par défaut), sa fiche afficherait « Couverture des critères : 83 % » (3 critères
-            sur 4 disponibles), et sa note resterait calculée normalement sur ces 3 critères, 90,4/100, sans
+            sur 4 disponibles), et sa note resterait calculée normalement sur ces 3 critères, 87,3/100, sans
             pénalité liée à la donnée manquante.
           </li>
         </ol>
@@ -275,8 +296,8 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
 
         <h2>6. Ce qu'il faut garder en tête</h2>
         <ul>
-          <li>La population manque encore pour environ 38 % du Sénégal et 37 % de la Gambie, d'où son poids à 0 %. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
-          <li>14 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
+          <li>La population manque encore pour environ 39 % du Sénégal et 37 % de la Gambie, d'où son poids à 0 %. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
+          <li>7 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
           <li>« Accès route » est une distance à vol d'oiseau, pas un temps de trajet réel (état de la piste, saison des pluies, cours d'eau à franchir ne sont pas pris en compte). Le temps de trajet réel peut donc être nettement plus long que ce que suggère la distance, en particulier en saison des pluies.</li>
           <li>La note est un <b>outil de classement relatif</b>, pas une note de qualité absolue : deux communautés de pays différents avec la même note peuvent avoir un statut différent, puisque le classement est fait pays par pays.</li>
           <li>Le critère « Distance au bureau » pesant 45 %, il est normal qu'une zone proche d'un bureau ait un fort taux de sélection : ce n'est pas un déséquilibre, c'est le modèle qui fonctionne comme prévu. Ce poids est un choix du programme, pas une contrainte technique : il reste réglable dans l'onglet « Vue d'ensemble » si les priorités évoluent.</li>
