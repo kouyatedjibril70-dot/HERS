@@ -15,7 +15,7 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
 
         <h2>1. En bref</h2>
         <p>
-          Chaque communauté reçoit une <b>note sur 100</b>, calculée à partir de trois critères. Les communautés
+          Chaque communauté reçoit une <b>note sur 100</b>, calculée à partir de quatre critères. Les communautés
           sont ensuite classées par note, <b>séparément pour le Sénégal et pour la Gambie</b>, et on retient les
           mieux classées de chaque pays jusqu'à atteindre l'objectif fixé par le programme.
         </p>
@@ -33,11 +33,10 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <table>
             <thead><tr><th>Critère</th><th>Poids</th><th>Ce qui est « bon »</th></tr></thead>
             <tbody>
-              <tr><td>Distance au bureau de coordination</td><td><b>45 %</b></td><td>Plus la communauté est proche de son bureau, mieux c'est : la supervision est plus simple et moins coûteuse.</td></tr>
+              <tr><td>Distance au bureau de coordination</td><td><b>35 %</b></td><td>Plus la communauté est proche de son bureau, mieux c'est : la supervision est plus simple et moins coûteuse.</td></tr>
               <tr><td>Récence de la fin du <Prcc /></td><td><b>35 %</b></td><td>Plus le <Prcc /> s'est terminé récemment, mieux c'est : les structures de gouvernance villageoises sont encore actives.</td></tr>
-              <tr><td>Concentration de communautés voisines</td><td><b>20 %</b></td><td>Plus il y a d'autres communautés dans un rayon de 25 km, mieux c'est : c'est le meilleur proxy disponible à la capacité de la communauté à « adopter » un village voisin non-PRCC proche, et donc à ne pas être isolée.</td></tr>
-              <tr><td>Non-isolement (village non-PRCC le plus proche)</td><td><b>0 %</b></td><td>Prévu dans le modèle, calculé et disponible, mais désactivé aujourd'hui : quasiment toutes les communautés sont déjà proches d'un village non-PRCC, donc ce critère ne distinguerait presque personne (détail plus bas).</td></tr>
-              <tr><td>Population</td><td><b>0 %</b></td><td>Prévu dans le modèle mais désactivé aujourd'hui : donnée trop incomplète pour être équitable (détail plus bas).</td></tr>
+              <tr><td>Non-isolement (village non-PRCC le plus proche)</td><td><b>20 %</b></td><td>Plus le village non-PRCC le plus proche est proche, mieux c'est : la communauté pourra « l'adopter » et ne sera pas isolée (détail plus bas).</td></tr>
+              <tr><td>Population</td><td><b>10 %</b></td><td>Plus la communauté est peuplée, mieux c'est : un poids volontairement modeste, car la donnée manque pour environ 38 % de la base (détail plus bas).</td></tr>
             </tbody>
           </table>
         </div>
@@ -55,17 +54,18 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           Madiw</b> (bureau de Kolda). Sa fiche complète est consultable depuis l'onglet « Communautés ».
         </p>
 
-        <h3>Critère 1 : Distance au bureau de coordination (45 points sur 100)</h3>
+        <h3>Critère 1 : Distance au bureau de coordination (35 points sur 100)</h3>
         <p>
           <b>Pourquoi ce critère ?</b> Le bureau de coordination assure le suivi de terrain : visites de supervision,
           appui aux équipes locales, résolution des problèmes. Une communauté proche de son bureau coûte moins cher à
           suivre dans la durée et permet un accompagnement plus fréquent qu'une communauté à plusieurs heures de piste.
         </p>
         <p>
-          <b>Pourquoi 45 points, soit 45 % du score total ?</b> C'est le critère qui pèse le plus lourd, car il
-          conditionne directement la capacité du programme à suivre la communauté sur toute sa durée, quel que soit
-          par ailleurs son potentiel. Une communauté très reculée reste éligible, ce critère ne l'exclut jamais, mais
-          elle est structurellement désavantagée dans le classement, parce que le coût de suivi est réel et récurrent.
+          <b>Pourquoi 35 points, soit 35 % du score total ?</b> C'est, à égalité avec la récence du <Prcc />, le
+          critère qui pèse le plus lourd, car il conditionne directement la capacité du programme à suivre la
+          communauté sur toute sa durée, quel que soit par ailleurs son potentiel. Une communauté très reculée reste
+          éligible, ce critère ne l'exclut jamais, mais elle est structurellement désavantagée dans le classement,
+          parce que le coût de suivi est réel et récurrent.
         </p>
         <p>
           <b>Comment le chiffre brut devient une note (certain, c'est du calcul).</b> On ne compare pas les distances
@@ -98,9 +98,9 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <Prcc /> ont de chances d'être encore actifs, ce qui facilite le démarrage rapide d'un nouveau projet.
         </p>
         <p>
-          <b>Pourquoi 35 points, soit 35 % du score total ?</b> C'est le deuxième critère en importance après la
-          distance : il reflète la fraîcheur du lien avec le programme, qui conditionne l'effort de re-mobilisation
-          nécessaire avant de pouvoir démarrer les activités.
+          <b>Pourquoi 35 points, soit 35 % du score total ?</b> C'est, à égalité avec la distance au bureau, le
+          critère qui pèse le plus lourd : il reflète la fraîcheur du lien avec le programme, qui conditionne
+          l'effort de re-mobilisation nécessaire avant de pouvoir démarrer les activités.
         </p>
         <p>
           <b>Comment le chiffre brut devient une note (certain).</b> Même principe que pour la distance : on compare
@@ -118,83 +118,103 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           </table>
         </div>
         <p>
-          <b>D'où vient le chiffre brut (limite honnête à connaître).</b> Contrairement à la distance et à la
-          densité, cette donnée est fournie telle quelle dans la base d'origine du programme : elle n'est pas
+          <b>D'où vient le chiffre brut (limite honnête à connaître).</b> Contrairement à la distance et au
+          non-isolement, cette donnée est fournie telle quelle dans la base d'origine du programme : elle n'est pas
           calculée par la plateforme, donc elle ne peut pas être recalculée ni vérifiée de façon indépendante. Le
           score utilise uniquement <b>l'année de fin</b> de chaque <Prcc />.
         </p>
 
-        <h3>Critère 3 : Concentration de communautés voisines, rayon 25 km (20 points sur 100)</h3>
+        <h3>Critère 3 : Non-isolement, distance au village non-PRCC le plus proche (20 points sur 100)</h3>
         <p>
-          <b>Ce que ce critère est censé mesurer, à l'origine.</b> L'idée du programme est d'éviter de sélectionner
-          des communautés <b>isolées</b>, sans aucun village voisin avec qui collaborer : chaque communauté
-          sélectionnée devrait pouvoir « adopter » un village <b>non-PRCC</b> proche, et plus ce village adopté est
-          proche, mieux c'est. Ce n'est pas un critère d'efficacité de tournée, ni lié à la concentration de
-          communautés PRCC dans une même zone.
+          <b>Pourquoi ce critère ?</b> L'idée du programme est d'éviter de sélectionner des communautés
+          <b> isolées</b>, sans aucun village voisin avec qui collaborer : chaque communauté sélectionnée devrait
+          pouvoir « adopter » un village <b>non-PRCC</b> proche, et plus ce village adopté est proche, mieux c'est.
+          Ce n'est ni un critère d'efficacité de tournée de terrain, ni lié à la concentration de communautés PRCC
+          dans une même zone.
         </p>
         <p>
-          <b>Ce qui est réellement calculé aujourd'hui (limite de données à connaître).</b> Aucune des 946
-          communautés de la base n'a le statut <Prcc /> « Non » : la base ne contient, par construction, que des
-          communautés déjà PRCC. Il est donc actuellement impossible de calculer une distance à un village non-PRCC.
-          Ce qui est mesuré à la place est un indicateur proche mais différent : le nombre <b>d'autres communautés
-          PRCC</b> (donc déjà dans le programme) présentes dans un rayon de 25 km. C'est un proxy imparfait : une
-          zone dense en communautés déjà PRCC n'y est comptée que parce qu'elle est dense en PRCC, pas parce qu'un
-          village non-PRCC à adopter y est garanti. Ce n'est ni une mesure d'efficacité de tournée de terrain, ni un
-          objectif de concentration de communautés PRCC dans une même zone — seulement le meilleur proxy disponible
-          aujourd'hui au critère de non-isolement voulu à l'origine. Recalculer le critère tel qu'initialement prévu
-          demanderait une base de villages non-PRCC géolocalisés, qui n'existe pas encore dans les données du
-          programme pour la Gambie (elle existe en partie pour le Sénégal) — <b>c'est précisément ce qui a été
-          construit pour le critère 5 ci-dessous</b>, à partir d'OpenStreetMap plutôt que de la base du programme.
+          <b>Historique : ce critère remplace un ancien proxy, retiré de l'outil.</b> Aucune des 946 communautés de
+          la base n'a le statut <Prcc /> « Non » : la base ne contient, par construction, que des communautés déjà
+          PRCC, rendant impossible un calcul direct de distance à un village non-PRCC. Un premier critère avait donc
+          mesuré à la place le nombre d'autres communautés <i>déjà PRCC</i> dans un rayon de 25 km — un indicateur
+          proche mais différent : une zone dense en communautés PRCC n'y était comptée que parce qu'elle est dense
+          en PRCC, pas parce qu'un village non-PRCC à adopter y est garanti. Ce proxy a été retiré du modèle et
+          remplacé par la mesure directe ci-dessous, construite à partir d'OpenStreetMap plutôt que de la base du
+          programme.
         </p>
         <p>
-          <b>Pourquoi 20 points, soit 20 % du score total ?</b> C'est un critère complémentaire à la distance au
-          bureau (accès individuel) et à la récence du <Prcc /> (état du lien avec le programme) : il ajoute une
-          dimension de non-isolement sans dominer le classement.
+          <b>D'où vient le chiffre brut (vérifié, méthode transparente).</b> La base du programme ne contenant aucun
+          village non-PRCC géolocalisé, la plateforme s'appuie sur <b>OpenStreetMap</b> : tous les lieux habités
+          cartographiés (ville, village, hameau, habitat isolé) au Sénégal et en Gambie ont été extraits
+          (15 350 points). Deux types de points sont ensuite écartés pour chaque communauté, pour ne garder que de
+          vrais voisins distincts : (1) tout point à moins de 100 m, quel que soit son nom — à cette distance c'est
+          forcément le même lieu physique, le plus souvent le centre de sa propre commune plutôt qu'un village
+          différent ; (2) tout point situé à moins de 3 km dont le nom ressemble fortement au sien — probablement
+          elle-même, cartographiée sous un identifiant légèrement différent. Un point proche mais à un nom vraiment
+          différent n'est <b>jamais</b> écarté, même à quelques centaines de mètres : ce peut être un vrai voisin
+          non-PRCC. Pour chacune des 946 communautés éligibles, la distance à vol d'oiseau jusqu'au point restant le
+          plus proche a ensuite été calculée.
         </p>
         <p>
-          <b>Comment le chiffre brut devient une note (certain).</b> Même principe : la communauté avec le plus de
-          voisines dans un rayon de 25 km est proche de 100 points, la plus isolée proche de 0.
+          <b>Pourquoi 20 points, soit 20 % du score total ?</b> Le même poids que l'ancien critère qu'il remplace :
+          un complément à la distance au bureau (accès individuel) et à la récence du <Prcc /> (état du lien avec le
+          programme), sans dominer le classement.
+        </p>
+        <p>
+          <b>Comment le chiffre brut devient une note (certain).</b> La communauté la plus proche d'un village
+          non-PRCC est proche de 100 points, la plus isolée proche de 0. Sur les 713 communautés sénégalaises :
         </p>
         <div className="method-table">
           <table>
-            <thead><tr><th>Position dans le classement</th><th>Nombre de voisines correspondant</th><th>Exemple réel</th></tr></thead>
+            <thead><tr><th>Position dans le classement</th><th>Distance au non-PRCC correspondante</th><th>Exemple réel</th></tr></thead>
             <tbody>
-              <tr><td>Les 10 % les plus denses</td><td>50 voisines ou plus</td><td>&nbsp;</td></tr>
-              <tr><td>La médiane (milieu du classement)</td><td>24 voisines</td><td><b>saré Madiw</b> : 45 voisines <b>soit 78,8 pts</b></td></tr>
-              <tr><td>Les 10 % les plus isolées</td><td>8 voisines ou moins</td><td>&nbsp;</td></tr>
-              <tr><td>La plus isolée de toutes</td><td>0 voisine</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus proches</td><td>0,18 km ou moins</td><td><b>saré Madiw</b> : 0,32 km (Sanankoro) <b>soit 80,8 pts</b></td></tr>
+              <tr><td>La médiane (milieu du classement)</td><td>1,20 km</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus isolées</td><td>5,05 km ou plus</td><td>&nbsp;</td></tr>
+              <tr><td>La plus isolée de toutes</td><td>12,4 km (Kéniéba)</td><td>&nbsp;</td></tr>
             </tbody>
           </table>
         </div>
         <p>
-          <b>D'où vient le chiffre brut « Autres communautés dans 25 km » (vérifié, pas supposé).</b> Ce chiffre était
-          déjà présent dans les données avant ce projet, sans script permettant de savoir comment il avait été
-          calculé à l'origine. Il a donc été recalculé indépendamment : distance à vol d'oiseau entre chaque paire de
-          communautés, à partir des coordonnées actuelles, comptée si elle est de 25 km ou moins (et uniquement entre
-          communautés éligibles, depuis l'exclusion des <Prcc /> antérieurs à 2010). Comparé au chiffre enregistré
-          pour les 946 communautés éligibles : <b>correspondance à 100 %, aucun écart.</b> Ça n'a pas toujours été
-          le cas : un premier contrôle avait révélé un écart sur 23 % des communautés, concentré sur celles dont la
-          position GPS avait été corrigée depuis. Ce champ est désormais recalculé automatiquement à chaque
-          correction de position, pour rester exact en continu.
+          <b>D'où vient le chiffre « Autres communautés dans 25 km » encore affiché ailleurs dans l'outil ?</b> Ce
+          chiffre (concentration de voisines déjà PRCC) reste visible à titre de contexte dans l'onglet Analyse
+          spatiale, mais n'entre plus dans le score depuis le retrait du proxy ci-dessus.
         </p>
+        <p>
+          <b>Une couverture de données bien meilleure que redoutée.</b> <b>92,1 %</b> des communautés ont déjà un
+          village non-PRCC à <b>5 km ou moins</b>, <b>99,7 %</b> à 10 km ou moins, et la plus isolée de toutes n'est
+          qu'à <b>12,4 km</b> (aucune communauté au-delà). Un contrôle croisé confirme la fiabilité de ce chiffre :
+          aucune communauté très entourée de voisines PRCC ne se retrouve isolée côté non-PRCC, ce qui aurait
+          signalé une zone mal cartographiée sur OpenStreetMap.
+        </p>
+        <div className="callout warn">
+          <b>Garde-fou : 3 communautés à plus de 10 km d'un village non-PRCC</b>
+          <span>
+            Sur les 946 communautés éligibles, seules <b>3</b> ont leur village non-PRCC le plus proche à plus de
+            10 km : <b>Kéniéba</b> (12,4 km), <b>Didié Gassama</b> (12,2 km) et <b>Dially</b> (12,1 km), toutes au
+            Sénégal. Avec la pondération actuelle, <b>Dially</b> fait malgré tout partie des 803 communautés
+            retenues (exactement au rang 642 sur 642 pour le Sénégal, à la limite) ; les deux autres en sont
+            exclues — ce chiffre se recalcule automatiquement à chaque changement de pondération. Ce même
+            garde-fou est visible dans l'onglet « Analyse spatiale », dans la synthèse en haut de page.
+          </span>
+        </div>
 
-        <h3>Critère 4 : Population (0 point sur 100 actuellement, critère prévu mais non activé)</h3>
+        <h3>Critère 4 : Population (10 points sur 100)</h3>
         <p>
-          <b>Pourquoi ce critère existe dans le modèle ?</b> Une communauté plus peuplée offre, en théorie, un bassin
-          plus large de bénéficiaires potentiels pour les activités horticoles du programme. C'est un critère
-          pertinent en principe, prévu dès la conception de l'outil.
+          <b>Pourquoi ce critère ?</b> Une communauté plus peuplée offre, en théorie, un bassin plus large de
+          bénéficiaires potentiels pour les activités horticoles du programme.
         </p>
         <p>
-          <b>Pourquoi 0 point aujourd'hui ?</b> La donnée manque pour une part importante de la base : <b>39 %</b> des
-          communautés sénégalaises et <b>37 %</b> des communautés gambiennes n'ont aucun chiffre de population.
-          Activer ce critère pénaliserait mécaniquement les communautés sans donnée, sans que ce soit un jugement sur
-          leur taille réelle. Le poids reste à 0 % par défaut, mais il est réglable dans l'onglet « Vue d'ensemble » si
-          le programme décide un jour de l'activer malgré cette couverture incomplète.
+          <b>Pourquoi seulement 10 points, soit 10 % du score total ?</b> La donnée manque pour une part importante
+          de la base : <b>39 %</b> des communautés sénégalaises et <b>37 %</b> des communautés gambiennes n'ont aucun
+          chiffre de population. Un poids élevé pénaliserait mécaniquement les communautés sans donnée ; un poids de
+          10 % reconnaît l'utilité du critère tout en limitant son impact sur cette part de la base. Comme pour les
+          autres critères, une communauté sans donnée n'est pas pénalisée : ce critère est simplement retiré de sa
+          moyenne (voir section 3). Le poids reste réglable dans l'onglet « Vue d'ensemble ».
         </p>
         <p>
-          <b>Comment le chiffre brut deviendrait une note si le critère était activé (certain, c'est le même
-          mécanisme).</b> Même principe de position relative que les trois critères précédents. Sur les 433
-          communautés sénégalaises où la population est connue :
+          <b>Comment le chiffre brut devient une note (certain, même mécanisme que les critères précédents).</b> Sur
+          les 433 communautés sénégalaises où la population est connue :
         </p>
         <div className="method-table">
           <table>
@@ -208,9 +228,9 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           </table>
         </div>
         <p>
-          À titre de comparaison, <b>saré Madiw</b> (l'exemple suivi dans les trois critères précédents) n'a pas de
-          donnée de population : si ce critère était activé, il serait simplement retiré de sa moyenne, sans
-          pénalité, conformément à la règle de couverture partielle expliquée en section 3.
+          À titre de comparaison, <b>saré Madiw</b> (l'exemple suivi dans les critères précédents) n'a pas de donnée
+          de population : ce critère est donc retiré de sa moyenne, sans pénalité, conformément à la règle de
+          couverture partielle expliquée en section 3.
         </p>
         <p>
           <b>D'où vient le chiffre brut (vérifié, avec plusieurs niveaux de confiance selon la source).</b>
@@ -237,63 +257,6 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           </li>
         </ul>
 
-        <h3>Critère 5 : Non-isolement, distance au village non-PRCC le plus proche (0 point sur 100 actuellement, critère disponible mais non activé)</h3>
-        <p>
-          <b>Pourquoi ce critère existe-t-il, séparément du critère 3 ?</b> Le critère 3 mesure un proxy (concentration
-          de communautés <i>déjà PRCC</i>) faute de mieux. Celui-ci mesure directement ce que le critère 3 était censé
-          mesurer à l'origine : la distance jusqu'au village <b>non-PRCC</b> le plus proche, c'est-à-dire la capacité
-          réelle de la communauté à « adopter » un voisin et à ne pas être isolée.
-        </p>
-        <p>
-          <b>D'où vient le chiffre brut (vérifié, méthode transparente).</b> La base du programme ne contenant aucun
-          village non-PRCC géolocalisé, la plateforme s'appuie sur <b>OpenStreetMap</b> : tous les lieux habités
-          cartographiés (ville, village, hameau, habitat isolé) au Sénégal et en Gambie ont été extraits
-          (15 350 points), puis ceux situés à moins de 300 m d'une communauté PRCC de la base ont été écartés — ce
-          sont très probablement la communauté elle-même, déjà cartographiée sous un autre identifiant, pas un
-          voisin distinct. Pour chacune des 946 communautés éligibles, la distance à vol d'oiseau jusqu'au point
-          restant le plus proche a ensuite été calculée.
-        </p>
-        <p>
-          <b>Pourquoi 0 point aujourd'hui, alors que la donnée existe et est fiable ?</b> Parce qu'elle ne distingue
-          presque personne : <b>91,6 %</b> des communautés ont déjà un village non-PRCC à <b>5 km ou moins</b>,
-          <b>99,7 %</b> à 10 km ou moins, et la plus isolée de toutes n'est qu'à <b>14,7 km</b> (aucune communauté
-          au-delà). Activer ce critère à poids élevé changerait donc très peu la sélection, sauf pour la poignée de
-          communautés réellement isolées en bout de liste. Un contrôle croisé confirme la fiabilité de ce chiffre :
-          aucune des communautés très entourées de voisines PRCC (critère 3) ne se retrouve isolée côté non-PRCC, ce
-          qui aurait signalé une zone mal cartographiée sur OpenStreetMap.
-        </p>
-        <p>
-          <b>Comment le chiffre brut deviendrait une note si le critère était activé (certain, même mécanisme).</b> La
-          communauté la plus proche d'un village non-PRCC est proche de 100 points, la plus isolée proche de 0. Sur
-          les 713 communautés sénégalaises :
-        </p>
-        <div className="method-table">
-          <table>
-            <thead><tr><th>Position dans le classement</th><th>Distance au non-PRCC correspondante</th><th>Exemple réel</th></tr></thead>
-            <tbody>
-              <tr><td>Les 10 % les plus proches</td><td>0,46 km ou moins</td><td><b>saré Madiw</b> : 0,32 km (Sanankoro) <b>soit 98,6 pts</b></td></tr>
-              <tr><td>La médiane (milieu du classement)</td><td>1,61 km</td><td>&nbsp;</td></tr>
-              <tr><td>Les 10 % les plus isolées</td><td>5,05 km ou plus</td><td>&nbsp;</td></tr>
-              <tr><td>La plus isolée de toutes</td><td>14,7 km (Didié Gassama)</td><td>&nbsp;</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div className="callout warn">
-          <b>Garde-fou : 3 communautés à plus de 10 km d'un village non-PRCC</b>
-          <span>
-            Sur les 946 communautés éligibles, seules <b>3</b> ont leur village non-PRCC le plus proche à plus de
-            10 km : <b>Didié Gassama</b> (14,7 km), <b>Dially</b> (12,1 km) et <b>Bancouba</b> (10,2 km), toutes au
-            Sénégal. Avec la pondération actuelle (ce critère à 0 %), une seule des trois, <b>Dially</b>, fait
-            malgré tout partie des 803 communautés retenues (rang 613 sur 642 pour le Sénégal) — ce chiffre se
-            recalcule automatiquement à chaque changement de pondération. Ce même garde-fou est visible dans
-            l'onglet « Analyse spatiale », dans la synthèse en haut de page.
-          </span>
-        </div>
-        <p className="method-note">
-          Ce critère reste réglable dans l'onglet « Vue d'ensemble », au même titre que les autres : lui donner du
-          poids pénaliserait ces 3 communautés sans redistribuer significativement le reste du classement.
-        </p>
-
         <h2>3. De la valeur brute à la note</h2>
         <ol>
           <li>
@@ -301,15 +264,14 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             par rapport à toutes les autres de son pays, comme détaillé section par section ci-dessus. Cela donne un
             nombre de 0 à 100 par critère.
           </li>
-          <li>La note finale est la <b>moyenne de ces positions, pondérée</b> par les poids ci-dessus (45 / 35 / 20 / 0).</li>
+          <li>La note finale est la <b>moyenne de ces positions, pondérée</b> par les poids ci-dessus (35 / 35 / 20 / 10).</li>
           <li>
             Si une donnée manque pour une communauté, le critère concerné est simplement <b>retiré de sa moyenne</b> :
             la communauté n'est pas pénalisée. La fiche de détail affiche « Couverture des critères : X % » pour
             indiquer quelle part du calcul a réellement pu être faite. Exemple concret : <b>saré Madiw</b> (notre
-            exemple suivi plus haut) n'a pas de donnée de population. Si la Population était activée à 20 % de
-            poids (elle est à 0 % par défaut), sa fiche afficherait « Couverture des critères : 83 % » (3 critères
-            sur 4 disponibles), et sa note resterait calculée normalement sur ces 3 critères, 87,3/100, sans
-            pénalité liée à la donnée manquante.
+            exemple suivi plus haut) n'a pas de donnée de population : sa fiche affiche « Couverture des critères :
+            90 % » (3 critères sur 4 disponibles), et sa note est calculée normalement sur ces 3 critères, 86,4/100,
+            sans pénalité liée à la donnée manquante.
           </li>
         </ol>
 
@@ -328,6 +290,14 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           <b> n'entrant pas dans le calcul du score</b> : ils servent à l'appréciation humaine de l'équipe
           programme (anticiper les difficultés d'accès lors de la planification des visites terrain, évaluer
           le potentiel agricole d'une zone…), pas à un calcul automatisé.
+        </p>
+        <h3>Concentration de communautés voisines (déjà PRCC), rayon 25 km</h3>
+        <p>
+          Nombre d'autres communautés déjà PRCC dans un rayon de 25 km. C'était l'ancien critère 3 du score
+          (20 %, voir l'historique section 2) : retiré depuis que le critère Non-isolement mesure directement la
+          distance au village non-PRCC le plus proche. Il reste affiché à titre de contexte dans l'onglet Analyse
+          spatiale (utile pour repérer des zones où des tournées de terrain peuvent couvrir plusieurs communautés
+          proches), mais n'entre plus dans le score.
         </p>
         <h3>Potentiel agricole</h3>
         <p>
@@ -363,11 +333,11 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
 
         <h2>6. Ce qu'il faut garder en tête</h2>
         <ul>
-          <li>La population manque encore pour environ 39 % du Sénégal et 37 % de la Gambie, d'où son poids à 0 %. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
+          <li>La population manque encore pour environ 39 % du Sénégal et 37 % de la Gambie, d'où un poids modeste de 10 % plutôt qu'un poids plus élevé. Pour la Gambie, les valeurs disponibles sont une estimation 2024, pas un comptage direct.</li>
           <li>7 communautés restent positionnées par estimation (moyenne de villages voisins vérifiés) ; pour celles-là, les indicateurs qui dépendent de la position sont approximatifs.</li>
           <li>« Accès route » est une distance à vol d'oiseau, pas un temps de trajet réel (état de la piste, saison des pluies, cours d'eau à franchir ne sont pas pris en compte). Le temps de trajet réel peut donc être nettement plus long que ce que suggère la distance, en particulier en saison des pluies.</li>
           <li>La note est un <b>outil de classement relatif</b>, pas une note de qualité absolue : deux communautés de pays différents avec la même note peuvent avoir un statut différent, puisque le classement est fait pays par pays.</li>
-          <li>Le critère « Distance au bureau » pesant 45 %, il est normal qu'une zone proche d'un bureau ait un fort taux de sélection : ce n'est pas un déséquilibre, c'est le modèle qui fonctionne comme prévu. Ce poids est un choix du programme, pas une contrainte technique : il reste réglable dans l'onglet « Vue d'ensemble » si les priorités évoluent.</li>
+          <li>Les critères « Distance au bureau » et « Récence du PRCC » pesant chacun 35 %, il est normal qu'une zone proche d'un bureau et à PRCC récent ait un fort taux de sélection : ce n'est pas un déséquilibre, c'est le modèle qui fonctionne comme prévu. Ces poids sont un choix du programme, pas une contrainte technique : ils restent réglables dans l'onglet « Vue d'ensemble » si les priorités évoluent.</li>
         </ul>
 
         <h2>7. Ce que ce modèle ne fait pas</h2>

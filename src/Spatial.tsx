@@ -91,7 +91,11 @@ function modeValue(r: Community, mode: Mode): string | null {
   if (mode === "marche") return `marché le plus proche : ${km("dist_marche_osm_km")}`;
   if (mode === "eau") return `point d'eau le plus proche : ${km("dist_eau_osm_km")}`;
   if (mode === "ville") return `ville la plus proche : ${km("dist_ville_km")}`;
-  if (mode === "nonprcc") { const v = num(r, "dist_non_prcc_osm_km"); const nom = r["nom_non_prcc_osm"]; return Number.isFinite(v) ? `village non-PRCC le plus proche : ${v.toFixed(1)} km${nom ? ` (${nom})` : ""}` : null; }
+  if (mode === "nonprcc") {
+    const proches = r["villages_non_prcc_proches"] as { nom: string | null; km: number }[] | undefined;
+    if (!Array.isArray(proches) || proches.length === 0) return null;
+    return `villages non-PRCC les plus proches : ${proches.slice(0, 2).map((v) => `${v.km.toFixed(1)} km${v.nom ? ` (${v.nom})` : ""}`).join(", ")}`;
+  }
   if (mode === "distance") { const v = num(r, "Distance bureau (km)"); return Number.isFinite(v) ? `bureau : ${v.toFixed(0)} km` : null; }
   if (mode === "score") return `score : ${r.score}/100`;
   if (mode === "population") { const v = num(r, "POPULATION"); return Number.isFinite(v) ? `population : ${v.toLocaleString("fr-FR")}` : "population : n/d"; }
@@ -242,7 +246,7 @@ function PoiLayer({ data, kind }: { data: any; kind: "villes" | "marches" | "eau
 // ---- à chaque changement de filtre — aucune phrase figée, aucun texte non vérifié.          ----
 const CRIT_LABELS: Record<string, string> = {
   dist: "la distance au bureau",
-  dens: "la concentration de communautés voisines",
+  isol: "le non-isolement (village non-PRCC proche)",
   recent: "la récence de fin du PRCC",
 };
 
@@ -255,7 +259,7 @@ function avgField(arr: Community[], field: string): number | null {
   return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
 }
 
-// Compare deux groupes sur les critères actifs (dist/dens/recent par défaut) et renvoie le(s) plus déterminant(s),
+// Compare deux groupes sur les critères actifs (dist/isol/recent par défaut) et renvoie le(s) plus déterminant(s),
 // avec leur valeur brute lisible. Ne renvoie que des écarts réellement calculés — jamais une affirmation par défaut.
 // `keys` permet d'exclure un critère tautologique : pour "Communautés éloignées", le groupe "far" est PAR
 // DÉFINITION celui qui a le plus mauvais score de distance (c'est le critère de découpage lui-même) — le
@@ -264,9 +268,9 @@ function avgField(arr: Community[], field: string): number | null {
 function compareGroups(
   groupA: Community[],
   groupB: Community[],
-  keys: ("dist" | "dens" | "recent")[] = ["dist", "dens", "recent"],
-): { key: "dist" | "dens" | "recent"; gap: number; detailA: number; detailB: number }[] {
-  const fieldFor: Record<string, string> = { dist: "Distance bureau (km)", dens: "Autres communautés dans 25 km", recent: "Année Fin PRCC" };
+  keys: ("dist" | "isol" | "recent")[] = ["dist", "isol", "recent"],
+): { key: "dist" | "isol" | "recent"; gap: number; detailA: number; detailB: number }[] {
+  const fieldFor: Record<string, string> = { dist: "Distance bureau (km)", isol: "dist_non_prcc_osm_km", recent: "Année Fin PRCC" };
   return keys
     .map((key) => {
       const aScore = avgScore(groupA, key), bScore = avgScore(groupB, key);
@@ -276,13 +280,13 @@ function compareGroups(
       if (detailA === null || detailB === null) return null;
       return { key, gap: aScore - bScore, detailA, detailB };
     })
-    .filter((x): x is { key: "dist" | "dens" | "recent"; gap: number; detailA: number; detailB: number } => x !== null)
+    .filter((x): x is { key: "dist" | "isol" | "recent"; gap: number; detailA: number; detailB: number } => x !== null)
     .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap));
 }
 
 function formatDetail(key: string, detailA: number, detailB: number, labelA: string, labelB: string): string {
   if (key === "dist") return `distance moyenne au bureau : ${detailA.toFixed(0)} km (${labelA}) contre ${detailB.toFixed(0)} km (${labelB})`;
-  if (key === "dens") return `${detailA.toFixed(1)} voisines en moyenne dans 25 km (${labelA}) contre ${detailB.toFixed(1)} (${labelB})`;
+  if (key === "isol") return `${detailA.toFixed(1)} km en moyenne jusqu'au village non-PRCC le plus proche (${labelA}) contre ${detailB.toFixed(1)} km (${labelB})`;
   return `PRCC terminé en moyenne en ${detailA.toFixed(0)} (${labelA}) contre ${detailB.toFixed(0)} (${labelB})`;
 }
 
@@ -489,13 +493,13 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     };
   }
 
-  // --- Non-isolement (village non-PRCC le plus proche) : contrairement à marché/eau/ville, c'est un
-  //     véritable critère du modèle (poids 0 % par défaut, réglable), pas un simple indicateur de contexte.
+  // --- Non-isolement (village non-PRCC le plus proche) : véritable critère du modèle (20 % par défaut,
+  //     réglable), pas un simple indicateur de contexte comme marché/eau/ville.
   if (mode === "nonprcc") {
     const avec = rows.filter((r) => Number.isFinite(Number(r["dist_non_prcc_osm_km"])));
     const m = avec.length;
-    const lecture = "Distance à vol d'oiseau (OpenStreetMap) jusqu'au village non-PRCC le plus proche : c'est la mesure directe du non-isolement que le critère « Concentration de communautés voisines » ne peut qu'approcher indirectement (voir page Méthode, critère 5).";
-    const retenir = "Ce critère existe dans le modèle de score (poids 0 % par défaut, réglable dans l'onglet Vue d'ensemble) : la quasi-totalité des communautés ayant déjà un village non-PRCC à moins de 5 km, lui donner du poids ne changerait la sélection que pour les rares communautés à plus de 10 km (voir le garde-fou en synthèse).";
+    const lecture = "Distance à vol d'oiseau (OpenStreetMap) jusqu'au village non-PRCC le plus proche : c'est la mesure directe du non-isolement, qui a remplacé l'ancien proxy « Concentration de communautés voisines » (voir page Méthode, critère 3).";
+    const retenir = "Ce critère pèse 20 % du score (réglable dans l'onglet Vue d'ensemble) : la quasi-totalité des communautés ayant déjà un village non-PRCC à moins de 5 km, il ne pénalise concrètement que les rares communautés à plus de 10 km (voir le garde-fou en synthèse).";
     if (m === 0) return { observation: "Aucune donnée de distance à un village non-PRCC disponible dans la vue actuelle.", lecture, retenir };
     const val = (r: Community) => Number(r["dist_non_prcc_osm_km"]);
     const proche = avec.filter((r) => val(r) <= 5).length;
@@ -822,7 +826,7 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
   const att: { c: string; t: string }[] = [];
   const under = ling.filter((x) => x.delta < -5);
   if (under.length) under.forEach((x) => att.push({ c: "#d64550", t: `${x.l} sous-représentée : ${x.s} communauté${x.s > 1 ? "s" : ""} retenue${x.s > 1 ? "s" : ""} (${x.ss.toFixed(0)} % de la sélection) contre ${x.b} dans la base (${x.bs.toFixed(0)} %), soit un écart de ${Math.abs(x.delta).toFixed(0)} points.` }));
-  else att.push({ c: "#2f9e6f", t: "La langue n'est pas un critère de sélection. Ce contrôle vérifie que les autres critères (distance, densité, récence) n'introduisent pas, par effet indirect, un déséquilibre linguistique involontaire. Résultat actuel : chaque langue garde une part quasi identique dans la sélection et dans la base (écart de 5 points de pourcentage ou moins pour toutes)." });
+  else att.push({ c: "#2f9e6f", t: "La langue n'est pas un critère de sélection. Ce contrôle vérifie que les autres critères (distance, non-isolement, récence) n'introduisent pas, par effet indirect, un déséquilibre linguistique involontaire. Résultat actuel : chaque langue garde une part quasi identique dans la sélection et dans la base (écart de 5 points de pourcentage ou moins pour toutes)." });
   const farShare = pct(far.length, sel.length);
   if (farShare >= 15) att.push({ c: "#e8a13a", t: `${far.length} communautés retenues (${farShare.toFixed(0)} %) sont à plus de ${farThresh} km d'un bureau.` });
   // Garde-fou : village non-PRCC le plus proche à plus de 10 km (OpenStreetMap). Seuil fixe, voir page Méthode,
@@ -981,9 +985,9 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
               if (tauxLocal >= 85) {
                 interpretation = `À cette distance, presque toutes les communautés sont retenues (${retenues.length} sur ${inRadius.length}, ${tauxLocal.toFixed(0)} %). C'est normal et attendu : plus une communauté est proche d'un bureau, plus elle marque de points sur ce critère, qui compte pour 45 % du score total. Ce taux élevé ne signale donc pas un problème : il montre simplement que le modèle fonctionne comme prévu.`;
               } else if (tauxLocal >= 50) {
-                interpretation = `${retenues.length} des ${inRadius.length} communautés de cette zone sont retenues (${tauxLocal.toFixed(0)} %). La proximité ne suffit donc pas seule ici : d'autres critères (concentration de voisines, récence du PRCC) font aussi la différence.`;
+                interpretation = `${retenues.length} des ${inRadius.length} communautés de cette zone sont retenues (${tauxLocal.toFixed(0)} %). La proximité ne suffit donc pas seule ici : d'autres critères (non-isolement, récence du PRCC) font aussi la différence.`;
               } else {
-                interpretation = `Seulement ${retenues.length} des ${inRadius.length} communautés de cette zone sont retenues (${tauxLocal.toFixed(0)} %), malgré leur proximité du bureau. Cela signifie que d'autres critères du score (concentration de voisines, récence du PRCC) pèsent plus lourd que la distance pour ces communautés précises.`;
+                interpretation = `Seulement ${retenues.length} des ${inRadius.length} communautés de cette zone sont retenues (${tauxLocal.toFixed(0)} %), malgré leur proximité du bureau. Cela signifie que d'autres critères du score (non-isolement, récence du PRCC) pèsent plus lourd que la distance pour ces communautés précises.`;
               }
 
               let pourquoi: string | null = null;
@@ -1010,14 +1014,14 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
               // "dist" toujours exclu : far est PAR DÉFINITION le groupe "distance > seuil", donc plus
               // mauvais que le reste sur ce critère par construction — le citer comme "explication de leur
               // maintien" est backwards (leur distance est justement pire, pas meilleure). Voir compareGroups.
-              const gaps = compareGroups(far, resteSelection, ["dens", "recent"]);
+              const gaps = compareGroups(far, resteSelection, ["isol", "recent"]);
               const partSel = pct(far.length, sel.length);
 
               // Seuils minimums, en unités réelles, pour qu'un écart soit assez parlant pour être cité.
-              // g.gap > 0 est requis : un critère où les éloignées sont MOINS bonnes que le reste (ex. moins
-              // de voisines à proximité) n'explique en rien leur maintien dans la sélection — ça ne fait
+              // g.gap > 0 est requis : un critère où les éloignées sont MOINS bonnes que le reste (ex. plus
+              // loin d'un village non-PRCC) n'explique en rien leur maintien dans la sélection — ça ne fait
               // qu'ajouter un autre point faible à celui déjà connu (la distance elle-même).
-              const seuils: Record<string, number> = { dist: 15, dens: 3, recent: 3 };
+              const seuils: Record<string, number> = { dist: 15, isol: 1, recent: 3 };
               const gapSignificatif = gaps.find((g) => g.gap > 0 && Math.abs(g.detailA - g.detailB) >= seuils[g.key]);
 
               let pourquoi: string;
@@ -1025,7 +1029,7 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
                 const detail = formatDetail(gapSignificatif.key, gapSignificatif.detailA, gapSignificatif.detailB, "communautés éloignées retenues", "reste de la sélection");
                 pourquoi = `Le critère qui explique le plus leur maintien dans la sélection est ${CRIT_LABELS[gapSignificatif.key]}, ${detail}.`;
               } else {
-                pourquoi = "Aucun critère ne se détache clairement : l'écart avec le reste de la sélection reste faible sur la distance, la concentration de voisines et la récence du PRCC. Leur sélection résulte d'une combinaison de petits avantages plutôt que d'un seul facteur déterminant.";
+                pourquoi = "Aucun critère ne se détache clairement : l'écart avec le reste de la sélection reste faible sur la distance, le non-isolement et la récence du PRCC. Leur sélection résulte d'une combinaison de petits avantages plutôt que d'un seul facteur déterminant.";
               }
 
               return (

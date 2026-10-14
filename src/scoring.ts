@@ -5,7 +5,7 @@ import type { Community } from "./App";
 export const hasPop = (r: any) =>
   r.POPULATION !== null && r.POPULATION !== undefined && r.POPULATION !== "" && Number.isFinite(Number(r.POPULATION));
 
-export const DEFAULT_WEIGHTS = { pop: 0, dist: 45, dens: 20, recent: 35, isol: 0 };
+export const DEFAULT_WEIGHTS = { pop: 10, dist: 35, recent: 35, isol: 20 };
 export type Weights = typeof DEFAULT_WEIGHTS;
 
 // Rang percentile d'une valeur DANS UN TABLEAU DÉJÀ TRIÉ (recherche binaire).
@@ -25,13 +25,11 @@ export function scoreAll(rows: Record<string, any>[], w: Weights): Community[] {
     const base = rows.filter((r) => r.Pays === country);
     const nums = (k: string) => base.map((r) => Number(r[k])).filter(Number.isFinite).sort((a, b) => a - b);
     const pop = base.filter(hasPop).map((r) => Number(r.POPULATION)).sort((a, b) => a - b);
-    const dist = nums("Distance bureau (km)"), dens = nums("Autres communautés dans 25 km"),
-      fin = nums("Année Fin PRCC"), isol = nums("dist_non_prcc_osm_km");
+    const dist = nums("Distance bureau (km)"), fin = nums("Année Fin PRCC"), isol = nums("dist_non_prcc_osm_km");
     return base.map((r) => {
       const items = [
         ["pop", hasPop(r) ? rankOf(pop, Number(r.POPULATION), true) : undefined, w.pop],
         ["dist", Number.isFinite(Number(r["Distance bureau (km)"])) ? rankOf(dist, Number(r["Distance bureau (km)"]), false) : undefined, w.dist],
-        ["dens", Number.isFinite(Number(r["Autres communautés dans 25 km"])) ? rankOf(dens, Number(r["Autres communautés dans 25 km"]), true) : undefined, w.dens],
         ["recent", Number.isFinite(Number(r["Année Fin PRCC"])) ? rankOf(fin, Number(r["Année Fin PRCC"]), true) : undefined, w.recent],
         ["isol", Number.isFinite(Number(r["dist_non_prcc_osm_km"])) ? rankOf(isol, Number(r["dist_non_prcc_osm_km"]), false) : undefined, w.isol],
       ] as [string, number | undefined, number][];

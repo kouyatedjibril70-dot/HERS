@@ -64,7 +64,7 @@ describe("scoreAll", () => {
 
   it("une distance au bureau plus faible donne un meilleur (plus haut) score, poids égaux ailleurs", () => {
     const rows = [row({ Communauté: "proche", "Distance bureau (km)": 1 }), row({ Communauté: "loin", "Distance bureau (km)": 200 })];
-    const scored = scoreAll(rows, { pop: 0, dist: 100, dens: 0, recent: 0, isol: 0 });
+    const scored = scoreAll(rows, { pop: 0, dist: 100, recent: 0, isol: 0 });
     const proche = scored.find((r) => r.Communauté === "proche")!;
     const loin = scored.find((r) => r.Communauté === "loin")!;
     expect(proche.score).toBeGreaterThan(loin.score);
