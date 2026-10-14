@@ -35,7 +35,8 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             <tbody>
               <tr><td>Distance au bureau de coordination</td><td><b>45 %</b></td><td>Plus la communauté est proche de son bureau, mieux c'est : la supervision est plus simple et moins coûteuse.</td></tr>
               <tr><td>Récence de la fin du <Prcc /></td><td><b>35 %</b></td><td>Plus le <Prcc /> s'est terminé récemment, mieux c'est : les structures de gouvernance villageoises sont encore actives.</td></tr>
-              <tr><td>Concentration de communautés voisines</td><td><b>20 %</b></td><td>Plus il y a d'autres communautés dans un rayon de 25 km, mieux c'est : on peut regrouper les consultations.</td></tr>
+              <tr><td>Concentration de communautés voisines</td><td><b>20 %</b></td><td>Plus il y a d'autres communautés dans un rayon de 25 km, mieux c'est : c'est le meilleur proxy disponible à la capacité de la communauté à « adopter » un village voisin non-PRCC proche, et donc à ne pas être isolée.</td></tr>
+              <tr><td>Non-isolement (village non-PRCC le plus proche)</td><td><b>0 %</b></td><td>Prévu dans le modèle, calculé et disponible, mais désactivé aujourd'hui : quasiment toutes les communautés sont déjà proches d'un village non-PRCC, donc ce critère ne distinguerait presque personne (détail plus bas).</td></tr>
               <tr><td>Population</td><td><b>0 %</b></td><td>Prévu dans le modèle mais désactivé aujourd'hui : donnée trop incomplète pour être équitable (détail plus bas).</td></tr>
             </tbody>
           </table>
@@ -136,16 +137,19 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
           communautés de la base n'a le statut <Prcc /> « Non » : la base ne contient, par construction, que des
           communautés déjà PRCC. Il est donc actuellement impossible de calculer une distance à un village non-PRCC.
           Ce qui est mesuré à la place est un indicateur proche mais différent : le nombre <b>d'autres communautés
-          PRCC</b> (donc déjà dans le programme) présentes dans un rayon de 25 km — un indicateur de regroupement, qui
-          a sa propre utilité (une tournée de terrain peut couvrir plusieurs communautés proches), mais qui n'est pas
-          équivalent au critère de non-isolement voulu à l'origine. Recalculer le critère tel qu'initialement prévu
+          PRCC</b> (donc déjà dans le programme) présentes dans un rayon de 25 km. C'est un proxy imparfait : une
+          zone dense en communautés déjà PRCC n'y est comptée que parce qu'elle est dense en PRCC, pas parce qu'un
+          village non-PRCC à adopter y est garanti. Ce n'est ni une mesure d'efficacité de tournée de terrain, ni un
+          objectif de concentration de communautés PRCC dans une même zone — seulement le meilleur proxy disponible
+          aujourd'hui au critère de non-isolement voulu à l'origine. Recalculer le critère tel qu'initialement prévu
           demanderait une base de villages non-PRCC géolocalisés, qui n'existe pas encore dans les données du
-          programme pour la Gambie (elle existe en partie pour le Sénégal).
+          programme pour la Gambie (elle existe en partie pour le Sénégal) — <b>c'est précisément ce qui a été
+          construit pour le critère 5 ci-dessous</b>, à partir d'OpenStreetMap plutôt que de la base du programme.
         </p>
         <p>
           <b>Pourquoi 20 points, soit 20 % du score total ?</b> C'est un critère complémentaire à la distance au
           bureau (accès individuel) et à la récence du <Prcc /> (état du lien avec le programme) : il ajoute une
-          dimension de regroupement/proximité sans dominer le classement.
+          dimension de non-isolement sans dominer le classement.
         </p>
         <p>
           <b>Comment le chiffre brut devient une note (certain).</b> Même principe : la communauté avec le plus de
@@ -232,6 +236,63 @@ export default function Method({ onGoDashboard }: { onGoDashboard: () => void })
             communautés sans donnée plutôt que d'afficher un chiffre trompeur.
           </li>
         </ul>
+
+        <h3>Critère 5 : Non-isolement, distance au village non-PRCC le plus proche (0 point sur 100 actuellement, critère disponible mais non activé)</h3>
+        <p>
+          <b>Pourquoi ce critère existe-t-il, séparément du critère 3 ?</b> Le critère 3 mesure un proxy (concentration
+          de communautés <i>déjà PRCC</i>) faute de mieux. Celui-ci mesure directement ce que le critère 3 était censé
+          mesurer à l'origine : la distance jusqu'au village <b>non-PRCC</b> le plus proche, c'est-à-dire la capacité
+          réelle de la communauté à « adopter » un voisin et à ne pas être isolée.
+        </p>
+        <p>
+          <b>D'où vient le chiffre brut (vérifié, méthode transparente).</b> La base du programme ne contenant aucun
+          village non-PRCC géolocalisé, la plateforme s'appuie sur <b>OpenStreetMap</b> : tous les lieux habités
+          cartographiés (ville, village, hameau, habitat isolé) au Sénégal et en Gambie ont été extraits
+          (15 350 points), puis ceux situés à moins de 300 m d'une communauté PRCC de la base ont été écartés — ce
+          sont très probablement la communauté elle-même, déjà cartographiée sous un autre identifiant, pas un
+          voisin distinct. Pour chacune des 946 communautés éligibles, la distance à vol d'oiseau jusqu'au point
+          restant le plus proche a ensuite été calculée.
+        </p>
+        <p>
+          <b>Pourquoi 0 point aujourd'hui, alors que la donnée existe et est fiable ?</b> Parce qu'elle ne distingue
+          presque personne : <b>91,6 %</b> des communautés ont déjà un village non-PRCC à <b>5 km ou moins</b>,
+          <b>99,7 %</b> à 10 km ou moins, et la plus isolée de toutes n'est qu'à <b>14,7 km</b> (aucune communauté
+          au-delà). Activer ce critère à poids élevé changerait donc très peu la sélection, sauf pour la poignée de
+          communautés réellement isolées en bout de liste. Un contrôle croisé confirme la fiabilité de ce chiffre :
+          aucune des communautés très entourées de voisines PRCC (critère 3) ne se retrouve isolée côté non-PRCC, ce
+          qui aurait signalé une zone mal cartographiée sur OpenStreetMap.
+        </p>
+        <p>
+          <b>Comment le chiffre brut deviendrait une note si le critère était activé (certain, même mécanisme).</b> La
+          communauté la plus proche d'un village non-PRCC est proche de 100 points, la plus isolée proche de 0. Sur
+          les 713 communautés sénégalaises :
+        </p>
+        <div className="method-table">
+          <table>
+            <thead><tr><th>Position dans le classement</th><th>Distance au non-PRCC correspondante</th><th>Exemple réel</th></tr></thead>
+            <tbody>
+              <tr><td>Les 10 % les plus proches</td><td>0,46 km ou moins</td><td><b>saré Madiw</b> : 0,32 km (Sanankoro) <b>soit 98,6 pts</b></td></tr>
+              <tr><td>La médiane (milieu du classement)</td><td>1,61 km</td><td>&nbsp;</td></tr>
+              <tr><td>Les 10 % les plus isolées</td><td>5,05 km ou plus</td><td>&nbsp;</td></tr>
+              <tr><td>La plus isolée de toutes</td><td>14,7 km (Didié Gassama)</td><td>&nbsp;</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="callout warn">
+          <b>Garde-fou : 3 communautés à plus de 10 km d'un village non-PRCC</b>
+          <span>
+            Sur les 946 communautés éligibles, seules <b>3</b> ont leur village non-PRCC le plus proche à plus de
+            10 km : <b>Didié Gassama</b> (14,7 km), <b>Dially</b> (12,1 km) et <b>Bancouba</b> (10,2 km), toutes au
+            Sénégal. Avec la pondération actuelle (ce critère à 0 %), une seule des trois, <b>Dially</b>, fait
+            malgré tout partie des 803 communautés retenues (rang 613 sur 642 pour le Sénégal) — ce chiffre se
+            recalcule automatiquement à chaque changement de pondération. Ce même garde-fou est visible dans
+            l'onglet « Analyse spatiale », dans la synthèse en haut de page.
+          </span>
+        </div>
+        <p className="method-note">
+          Ce critère reste réglable dans l'onglet « Vue d'ensemble », au même titre que les autres : lui donner du
+          poids pénaliserait ces 3 communautés sans redistribuer significativement le reste du classement.
+        </p>
 
         <h2>3. De la valeur brute à la note</h2>
         <ol>

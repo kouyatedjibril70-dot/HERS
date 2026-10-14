@@ -5,39 +5,11 @@ import { Compass, Ruler, AlertTriangle, Building2, Languages, CircleDot, Move, M
 import type { Community } from "./App";
 import { LANG_COLORS } from "./palette";
 import { withPrcc, PRCC_TOOLTIP } from "./Prcc";
+import { agriScore, roadAccessScore, BASEMAPS } from "./spatialScores";
 
 // Préfixe des fichiers de public/data — vaut "/" en dev, "/HERS/" une fois publié sur GitHub Pages
 // (sous-dossier). Permet de garder les mêmes chemins quel que soit l'hébergement.
 const DATA_BASE = `${import.meta.env.BASE_URL}data/`;
-
-// ---- Contexte spatial (indice de potentiel) — uniquement des indicateurs mesurés/calculés ----
-// « Accès marché » et « Proximité eau » ont été retirés : dans la chaîne de données actuelle ce
-// ne sont pas des mesures fiables (confirmé par l'auteur de la préparation des données).
-
-// Potentiel agricole : donnée RÉELLE (ESA WorldCover, % terres cultivées dans un rayon de 5 km)
-export function agriScore(r: Community): number {
-  const v = Number(r["pct_cultures_5km"]);
-  return Number.isFinite(v) ? v : 50; // 50 = neutre si absent pour une communauté
-}
-export function accessScore(r: Community): number {
-  const d = Number(r["Distance bureau (km)"]);
-  if (!Number.isFinite(d)) return 50;
-  return Math.max(0, 100 - d / 2.6);
-}
-// Accès route : donnée RÉELLE (OSM, distance à la route la plus proche en km)
-export function roadAccessScore(r: Community): number {
-  const d = Number(r["dist_route_km"]);
-  if (!Number.isFinite(d)) return 50;
-  return Math.max(0, 100 - d * 20); // 0 km -> 100, 5 km -> 0
-}
-export function concScore(r: Community): number {
-  const n = Number(r["Autres communautés dans 25 km"]);
-  return Number.isFinite(n) ? Math.min(100, (n / 100) * 100) : 50;
-}
-export function indiceSpatial(r: Community): number {
-  // Poids re-normalisés après retrait de marché (0,20) et eau (0,15) : 0,65 -> 1.
-  return 0.40 * accessScore(r) + 0.45 * agriScore(r) + 0.15 * concScore(r);
-}
 
 // Coordonnées des bureaux — calées sur le champ « Distance bureau (km) » de la base
 // (erreur moyenne < 1 km, sauf Ourossogui recalé par ajustement).
@@ -65,7 +37,7 @@ function jitter(seed: string): [number, number] {
   return [a * 0.018, b * 0.018];
 }
 
-type Mode = "statut" | "score" | "langue" | "distance" | "prcc" | "population" | "couverture" | "agri" | "route" | "marche" | "eau" | "ville";
+type Mode = "statut" | "score" | "langue" | "distance" | "prcc" | "population" | "couverture" | "agri" | "route" | "marche" | "eau" | "ville" | "nonprcc";
 
 // Distance à une ressource -> couleur (vert = proche/bon, rouge = loin).
 function distColor(d: number, b1: number, b2: number, b3: number): string {
@@ -83,6 +55,7 @@ function colorFor(r: Community, mode: Mode): string {
   if (mode === "marche") return distColor(num(r, "dist_marche_osm_km"), 10, 25, 50);
   if (mode === "eau") return distColor(num(r, "dist_eau_osm_km"), 2, 10, 25);
   if (mode === "ville") return distColor(num(r, "dist_ville_km"), 5, 15, 30);
+  if (mode === "nonprcc") return distColor(num(r, "dist_non_prcc_osm_km"), 2, 5, 10);
   if (mode === "couverture") return r.POPULATION !== null && r.POPULATION !== undefined ? "#2f9e6f" : "#d64550";
   const p = num(r, "POPULATION");
   if (!Number.isFinite(p)) return "#d7dee7";
@@ -99,6 +72,7 @@ function legendFor(mode: Mode, langs: string[]): { c: string; l: string }[] {
   if (mode === "marche") return [{ c: "#2f9e6f", l: "10 km ou moins" }, { c: "#7bbf4f", l: "10 à 25" }, { c: "#e8a13a", l: "25 à 50" }, { c: "#d64550", l: "plus de 50" }];
   if (mode === "eau") return [{ c: "#2f9e6f", l: "2 km ou moins" }, { c: "#7bbf4f", l: "2 à 10" }, { c: "#e8a13a", l: "10 à 25" }, { c: "#d64550", l: "plus de 25" }];
   if (mode === "ville") return [{ c: "#2f9e6f", l: "5 km ou moins" }, { c: "#7bbf4f", l: "5 à 15" }, { c: "#e8a13a", l: "15 à 30" }, { c: "#d64550", l: "plus de 30" }];
+  if (mode === "nonprcc") return [{ c: "#2f9e6f", l: "2 km ou moins" }, { c: "#7bbf4f", l: "2 à 5" }, { c: "#e8a13a", l: "5 à 10" }, { c: "#d64550", l: "plus de 10" }];
   if (mode === "couverture") return [{ c: "#2f9e6f", l: "Donnée disponible" }, { c: "#d64550", l: "Non renseignée" }];
   return [{ c: "#c3d4e6", l: "moins de 1 000" }, { c: "#7ba7d4", l: "1 000 à 3 000" }, { c: "#3d7ec0", l: "3 000 à 8 000" }, { c: "#1c4a86", l: "plus de 8 000" }, { c: "#d7dee7", l: "non renseignée" }];
 }
@@ -117,6 +91,7 @@ function modeValue(r: Community, mode: Mode): string | null {
   if (mode === "marche") return `marché le plus proche : ${km("dist_marche_osm_km")}`;
   if (mode === "eau") return `point d'eau le plus proche : ${km("dist_eau_osm_km")}`;
   if (mode === "ville") return `ville la plus proche : ${km("dist_ville_km")}`;
+  if (mode === "nonprcc") { const v = num(r, "dist_non_prcc_osm_km"); const nom = r["nom_non_prcc_osm"]; return Number.isFinite(v) ? `village non-PRCC le plus proche : ${v.toFixed(1)} km${nom ? ` (${nom})` : ""}` : null; }
   if (mode === "distance") { const v = num(r, "Distance bureau (km)"); return Number.isFinite(v) ? `bureau : ${v.toFixed(0)} km` : null; }
   if (mode === "score") return `score : ${r.score}/100`;
   if (mode === "population") { const v = num(r, "POPULATION"); return Number.isFinite(v) ? `population : ${v.toLocaleString("fr-FR")}` : "population : n/d"; }
@@ -129,23 +104,21 @@ function modeValue(r: Community, mode: Mode): string | null {
 
 // Fonds de carte proposés dans le sélecteur de couches (aucune clé requise).
 // NB : les tuiles Google (lyrs=…) ne sont pas officiellement supportées hors API Google — usage à titre pratique.
-export const BASEMAPS: { name: string; url: string; attribution: string; subdomains?: string; maxNativeZoom?: number }[] = [
-  { name: "OpenStreetMap", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors" },
-  { name: "Esri Imagery (satellite)", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attribution: "Imagerie &copy; Esri, Maxar, Earthstar Geographics", maxNativeZoom: 19 },
-  { name: "Esri Topo", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", attribution: "&copy; Esri", maxNativeZoom: 19 },
-  { name: "OpenTopoMap", url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenTopoMap (CC-BY-SA)", maxNativeZoom: 17 },
-  { name: "Google Plan", url: "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", attribution: "&copy; Google" },
-  { name: "Google Satellite", url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", attribution: "&copy; Google" },
-  { name: "Google Hybride", url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", attribution: "&copy; Google" },
-  { name: "Google Relief", url: "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}", attribution: "&copy; Google" },
-];
-
 // Occupation du sol classée — ESA WorldCover 2021, image statique locale (public/data/worldcover_senegal_gambie.png).
 // bounds = [[latSud, lonOuest], [latNord, lonEst]] de l'emprise de l'image.
 const LANDCOVER_BOUNDS: [[number, number], [number, number]] = [[12.1995, -17.6008], [16.8258, -11.2999]];
 
 // --- Mode correction de position : envoi vers un Google Sheet (Apps Script Web App) + sauvegarde locale ---
+// Sécurité, honnêtement : ceci est un site statique public, donc TOUT ce qui est dans ce fichier (URL, jeton)
+// est lisible par n'importe qui — ce n'est pas un secret, juste un frein aux abus automatisés opportunistes.
+// La vraie protection (bornes géographiques, jeton requis) est côté serveur, dans l'Apps Script lui-même —
+// voir apps-script/corrections-webhook.gs pour le code à déployer côté Google. Le risque réel reste faible :
+// ce canal alimente un Google Sheet relu manuellement avant toute correction appliquée aux vraies données,
+// jamais la plateforme en direct.
 const CORRECTIONS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz368CZ9huD-OLWTw3ip-VKx-v-sZhYddNGezpjhOHraThkiPp7aJdV7Fw7A6DuS_xtEg/exec";
+const CORRECTIONS_TOKEN = "hers-corr-2026-k4m9";
+// Boîte englobante large Sénégal + Gambie — un garde-fou de plausibilité, pas une vérification de précision.
+const CORRECTIONS_BBOX = { latMin: 11.5, latMax: 17, lonMin: -18, lonMax: -11 };
 const CORRECTIONS_KEY = "hers_corrections_v1";
 type Correction = { code: string; communaute: string; lat: number; lon: number; oldLat: number; oldLon: number; ts: number };
 // Deux icônes : discrète pour les points "juste déplaçables" (l'immense majorité — pas d'erreur
@@ -167,6 +140,9 @@ const dragIconPlain = L.divIcon({
 
 function MapView({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
+  // Déstructuration volontaire des deps : `center` est un littéral recréé à chaque rendu, le comparer
+  // par référence ferait recentrer la carte en continu.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { map.setView(center, zoom); }, [map, center[0], center[1], zoom]);
   return null;
 }
@@ -513,6 +489,25 @@ function analyseCarte(mode: Mode, rows: Community[]): { observation: string; lec
     };
   }
 
+  // --- Non-isolement (village non-PRCC le plus proche) : contrairement à marché/eau/ville, c'est un
+  //     véritable critère du modèle (poids 0 % par défaut, réglable), pas un simple indicateur de contexte.
+  if (mode === "nonprcc") {
+    const avec = rows.filter((r) => Number.isFinite(Number(r["dist_non_prcc_osm_km"])));
+    const m = avec.length;
+    const lecture = "Distance à vol d'oiseau (OpenStreetMap) jusqu'au village non-PRCC le plus proche : c'est la mesure directe du non-isolement que le critère « Concentration de communautés voisines » ne peut qu'approcher indirectement (voir page Méthode, critère 5).";
+    const retenir = "Ce critère existe dans le modèle de score (poids 0 % par défaut, réglable dans l'onglet Vue d'ensemble) : la quasi-totalité des communautés ayant déjà un village non-PRCC à moins de 5 km, lui donner du poids ne changerait la sélection que pour les rares communautés à plus de 10 km (voir le garde-fou en synthèse).";
+    if (m === 0) return { observation: "Aucune donnée de distance à un village non-PRCC disponible dans la vue actuelle.", lecture, retenir };
+    const val = (r: Community) => Number(r["dist_non_prcc_osm_km"]);
+    const proche = avec.filter((r) => val(r) <= 5).length;
+    const loin = avec.filter((r) => val(r) > 10).length;
+    const sansDonnee = n - m;
+    return {
+      observation: `Sur ${m} communautés affichées${sansDonnee > 0 ? " disposant de la donnée" : ""}, ${cpt(proche, m)} ont un village non-PRCC à 5 km ou moins, et ${cpt(loin, m)} à plus de 10 km.${sansDonnee > 0 ? ` ${sansDonnee} communauté${sansDonnee > 1 ? "s ne disposent" : " ne dispose"} pas de cette donnée.` : ""}`,
+      lecture,
+      retenir,
+    };
+  }
+
   return null;
 }
 
@@ -541,8 +536,15 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
   const [mode, setMode] = useState<Mode>("statut");
   // Buckets de légende masqués pour le mode de coloration courant (Score, Langue, Distance, etc.) —
   // remis à zéro à chaque changement de mode pour éviter qu'un filtre "< 40" reste actif en passant sur "Langue".
+  // Ajusté pendant le rendu plutôt que dans un effet (pas de rendu supplémentaire) ; prevMode permet de ne
+  // réagir qu'à un vrai changement de mode, pas à chaque rendu.
   const [hiddenBuckets, setHiddenBuckets] = useState<Set<string>>(new Set());
-  useEffect(() => { setHiddenBuckets(new Set()); }, [mode]);
+  const [prevMode, setPrevMode] = useState(mode);
+  if (mode !== prevMode) { setPrevMode(mode); setHiddenBuckets(new Set()); }
+  // Communauté dont on affiche les 3 villages non-PRCC les plus proches (mode "nonprcc" uniquement,
+  // sélectionnée au clic sur la carte) — vidée dès qu'on change de mode pour ne pas laisser de lignes orphelines.
+  const [isolFocus, setIsolFocus] = useState<Community | null>(null);
+  if (mode !== "nonprcc" && isolFocus !== null) setIsolFocus(null);
   const [spBureau, setSpBureau] = useState("Kolda");
   // Bureau choisi (indépendant du rayon) : un clic sur un bureau doit d'abord cadrer la carte sur lui et
   // toutes ses communautés, sans tracer de rayon tant que l'utilisateur ne l'a pas activé lui-même.
@@ -597,6 +599,9 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
   useEffect(() => { try { localStorage.setItem(CORRECTIONS_KEY, JSON.stringify(corrections)); } catch { /* quota / private */ } }, [corrections]);
 
   function saveCorrection(r: Community, lat: number, lon: number) {
+    // Garde-fou de plausibilité : une position hors de la boîte Sénégal/Gambie ne peut venir que d'un
+    // glissement raté ou d'un appel direct malveillant — on ne l'enregistre ni localement ni à distance.
+    if (lat < CORRECTIONS_BBOX.latMin || lat > CORRECTIONS_BBOX.latMax || lon < CORRECTIONS_BBOX.lonMin || lon > CORRECTIONS_BBOX.lonMax) return;
     const code = String(r["code communaute"] ?? r._id ?? r.Communauté);
     const existing = corrections[code];
     const oldLat = existing ? existing.oldLat : Number(r["Latitude référence"]);
@@ -609,7 +614,7 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ code_communaute: code, communaute: r.Communauté, lat, lon, oldLat, oldLon }),
+        body: JSON.stringify({ token: CORRECTIONS_TOKEN, code_communaute: code, communaute: r.Communauté, lat, lon, oldLat, oldLon }),
       }).catch(() => {});
     } catch { /* fetch indisponible */ }
   }
@@ -718,7 +723,7 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
                     weight: corr && correctionMode ? 2 : r.selected ? 1.5 : 1,
                     fillOpacity: r.selected ? 0.85 : 0.5,
                   }}
-                  eventHandlers={{ click: () => onSelect(r) }}
+                  eventHandlers={{ click: () => { onSelect(r); if (mode === "nonprcc") setIsolFocus(r); } }}
                 >
                   {(() => { const mv = modeValue(r, mode); return (
                     <Tooltip direction="top" offset={[0, -4]}>{r.Communauté}{mv ? ` · ${mv}` : ""}</Tooltip>
@@ -820,6 +825,10 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
   else att.push({ c: "#2f9e6f", t: "La langue n'est pas un critère de sélection. Ce contrôle vérifie que les autres critères (distance, densité, récence) n'introduisent pas, par effet indirect, un déséquilibre linguistique involontaire. Résultat actuel : chaque langue garde une part quasi identique dans la sélection et dans la base (écart de 5 points de pourcentage ou moins pour toutes)." });
   const farShare = pct(far.length, sel.length);
   if (farShare >= 15) att.push({ c: "#e8a13a", t: `${far.length} communautés retenues (${farShare.toFixed(0)} %) sont à plus de ${farThresh} km d'un bureau.` });
+  // Garde-fou : village non-PRCC le plus proche à plus de 10 km (OpenStreetMap). Seuil fixe, voir page Méthode,
+  // critère 5 — contrairement à "far" ce n'est pas un curseur réglable, juste 3 communautés au total sur 946.
+  const nonPrccIso = sel.filter((r) => num(r, "dist_non_prcc_osm_km") > 10);
+  if (nonPrccIso.length) att.push({ c: "#e8a13a", t: `${nonPrccIso.length} communauté${nonPrccIso.length > 1 ? "s" : ""} retenue${nonPrccIso.length > 1 ? "s" : ""} n'${nonPrccIso.length > 1 ? "ont" : "a"} aucun village non-PRCC connu à moins de 10 km (${nonPrccIso.map((r) => r.Communauté).join(", ")}).` });
   const snMissing = sel.filter((r) => r.Pays === "Sénégal" && r.POPULATION == null).length;
   if (snMissing) att.push({ c: "#e8a13a", t: `Population manquante pour ${snMissing} communautés sénégalaises retenues.` });
   const gmMissing = sel.filter((r) => r.Pays === "Gambie" && r.POPULATION == null).length;
@@ -836,7 +845,7 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
   }
   att.push({ c: "#2f9e6f", t: `Score moyen des retenues ${gS.score.toFixed(1)} contre ${gN.score.toFixed(1)} hors sélection, soit un écart de ${(gS.score - gN.score).toFixed(1)} points.` });
 
-  const segs: [Mode, string][] = [["statut", "Statut"], ["score", "Score"], ["langue", "Langue"], ["distance", "Distance bureau"], ["prcc", "Fin PRCC"], ["population", "Population"], ["couverture", "Couverture population"], ["agri", "Potentiel agricole"], ["route", "Accès route"], ["marche", "Marché proche"], ["eau", "Point d'eau proche"], ["ville", "Ville proche"]];
+  const segs: [Mode, string][] = [["statut", "Statut"], ["score", "Score"], ["langue", "Langue"], ["distance", "Distance bureau"], ["prcc", "Fin PRCC"], ["population", "Population"], ["couverture", "Couverture population"], ["agri", "Potentiel agricole"], ["route", "Accès route"], ["marche", "Marché proche"], ["eau", "Point d'eau proche"], ["ville", "Ville proche"], ["nonprcc", "Village non-PRCC proche"]];
 
   return (
     <section className="sp">
@@ -881,6 +890,21 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
               {showMarches && poi.marches && <PoiLayer data={poi.marches} kind="marches" />}
               {showEau && poi.eau && <PoiLayer data={poi.eau} kind="eau" />}
               {markerLayer}
+              {mode === "nonprcc" && isolFocus && Array.isArray(isolFocus.villages_non_prcc_proches) && (() => {
+                const origin: [number, number] = [num(isolFocus, "Latitude référence"), num(isolFocus, "Longitude référence")];
+                return (
+                  <Fragment>
+                    {(isolFocus.villages_non_prcc_proches as { nom: string | null; km: number; lat: number; lon: number }[]).map((v, i) => (
+                      <Fragment key={i}>
+                        <Polyline positions={[origin, [v.lat, v.lon]]} pathOptions={{ color: "#9b59b6", weight: 2, opacity: 0.7, dashArray: "5 5" }} />
+                        <CircleMarker center={[v.lat, v.lon]} radius={6} pathOptions={{ color: "#9b59b6", fillColor: "#9b59b6", weight: 2, fillOpacity: 0.85 }}>
+                          <Tooltip direction="top" offset={[0, -6]} permanent>{`${v.nom ?? "village sans nom"} · ${v.km.toFixed(1)} km`}</Tooltip>
+                        </CircleMarker>
+                      </Fragment>
+                    ))}
+                  </Fragment>
+                );
+              })()}
               {Object.entries(BUREAUX).map(([b, c]) => (
                 <CircleMarker key={b} center={c} radius={7} pathOptions={{ color: "#0c1b33", weight: 2, fillColor: "#ffd166", fillOpacity: 1 }}>
                   <Tooltip>{`Bureau ${b}`}</Tooltip>
@@ -916,6 +940,13 @@ export default function Spatial({ all, rows, onSelect, onBureau, isAdmin }: {
                 ))}
                 {mode === "population" && <span style={{ color: "#a8752a" }}>· Gambie : estimation 2024</span>}
               </div>
+            )}
+            {mode === "nonprcc" && (
+              <p className="muted" style={{ marginTop: 6 }}>
+                {isolFocus
+                  ? <>Villages non-PRCC les plus proches de <b>{isolFocus.Communauté}</b> (en violet). <button className="linkbtn" onClick={() => setIsolFocus(null)}>✕ Réinitialiser</button></>
+                  : "Cliquez sur une communauté pour afficher ses 3 villages non-PRCC OpenStreetMap les plus proches."}
+              </p>
             )}
             {showLandcover && (
               <div className="legend-row" style={{ marginTop: 6 }}>

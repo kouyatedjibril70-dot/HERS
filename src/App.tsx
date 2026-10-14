@@ -2,33 +2,34 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapContainer, TileLayer, LayersControl, CircleMarker, ZoomControl, useMap } from "react-leaflet";
 import { Search, SlidersHorizontal, Map as MapIcon, BarChart3, Users, Globe, X, ChevronRight, RotateCcw, MapPin, ArrowUpDown, ArrowUp, ArrowDown, FileText, Maximize2, Minimize2 } from "lucide-react";
-import communities from "./data/communities.json";
-// Identifiant stable, indépendant du rang/score (le rang change à chaque pondération — s'en servir
-// comme clé React forçait Leaflet à détruire/recréer ~1300 marqueurs à chaque glissement de curseur).
-const communitiesIndexed = (communities as any[]).map((r, i) => ({ ...r, _srcId: `row#${i}` }));
-import Spatial, { accessScore, agriScore, indiceSpatial, roadAccessScore, BASEMAPS } from "./Spatial";
+import Spatial from "./Spatial";
+import { accessScore, agriScore, indiceSpatial, roadAccessScore, BASEMAPS } from "./spatialScores";
 import { LANG_COLORS, ZONE_COLORS } from "./palette";
 import { withPrcc } from "./Prcc";
 import Method from "./Method";
+import { DEFAULT_WEIGHTS, scoreAll } from "./scoring";
 
 export type Community = Record<string, any> & {score:number;rank:number;selected:boolean;coverage:number;scores:Record<string,number|null>};
 const reduceMotion=typeof window!=="undefined"&&!!window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-// POPULATION est un champ partiellement manquant (valeur `null`) — Number(null)===0 est un nombre "fini",
-// donc un simple Number.isFinite(Number(...)) traiterait à tort "population inconnue" comme "population = 0".
-const hasPop=(r:any)=>r.POPULATION!==null&&r.POPULATION!==undefined&&r.POPULATION!==""&&Number.isFinite(Number(r.POPULATION));
 
 // --- Synchronisation de l'état avec l'URL (?vue=…&pays=…&p=…) : un rechargement ou un lien
 //     partagé rouvre la plateforme exactement dans le même onglet, les mêmes filtres, la même pondération.
 type Tab="dashboard"|"communities"|"spatial"|"method";
-const DEFAULT_WEIGHTS={pop:0,dist:45,dens:20,recent:35};
+// Objectifs fixés par le programme (642 Sénégal + 161 Gambie = 803), pas un résultat du calcul ni un
+// réglage de l'interface — voir page Méthode, section 4 « De la note à la sélection ».
+const TARGETS={Sénégal:642,Gambie:161};
 const TAB_TO_PARAM:Record<Tab,string>={dashboard:"",communities:"communities",spatial:"spatial",method:"methode"};
 const PARAM_TO_TAB:Record<string,Tab>={communities:"communities",spatial:"spatial",methode:"method"};
 const PAYS_TO_PARAM:Record<string,string>={"Tous":"","Sénégal":"sn","Gambie":"gm"};
 const PARAM_TO_PAYS:Record<string,string>={sn:"Sénégal",gm:"Gambie"};
 const ADMIN_KEY="hers_admin_v1";
+// Ce « cle » n'est PAS un secret au sens sécurité : le dépôt est public, donc visible par quiconque lit le
+// code source (ici ou dans l'historique git). Il ne fait que masquer les outils de correction aux visiteurs
+// occasionnels qui ne connaissent pas le lien ; il ne protège contre personne de déterminé. Si ça devient un
+// vrai problème, la solution est côté serveur (Apps Script), pas une clé plus longue côté client.
 function readAdminFlag(){
  try{
-  if(new URLSearchParams(window.location.search).get("cle")==="hers-admin-2026"){localStorage.setItem(ADMIN_KEY,"1");return true;}
+  if(new URLSearchParams(window.location.search).get("cle")==="hers-2026-admin-x7q3"){localStorage.setItem(ADMIN_KEY,"1");return true;}
   return localStorage.getItem(ADMIN_KEY)==="1";
  }catch{return false;}
 }
@@ -36,7 +37,8 @@ function readUrlState(){
  const q=new URLSearchParams(window.location.search);
  let weights={...DEFAULT_WEIGHTS};
  const p=q.get("p");
- if(p&&/^\d+-\d+-\d+-\d+$/.test(p)){const[pop,dist,dens,recent]=p.split("-").map(Number);weights={pop,dist,dens,recent};}
+ if(p&&/^\d+-\d+-\d+-\d+-\d+$/.test(p)){const[pop,dist,dens,recent,isol]=p.split("-").map(Number);weights={pop,dist,dens,recent,isol};}
+ else if(p&&/^\d+-\d+-\d+-\d+$/.test(p)){const[pop,dist,dens,recent]=p.split("-").map(Number);weights={pop,dist,dens,recent,isol:0};}
  return {
   tab:PARAM_TO_TAB[q.get("vue")||""]||"dashboard" as Tab,
   country:PARAM_TO_PAYS[q.get("pays")||""]||"Tous",
@@ -58,7 +60,7 @@ function writeUrlState(s:{tab:Tab;country:string;region:string;lang:string;burea
  if(s.query)q.set("q",s.query);
  if(s.only)q.set("sel","1");
  const w=s.weights;
- if(w.pop!==DEFAULT_WEIGHTS.pop||w.dist!==DEFAULT_WEIGHTS.dist||w.dens!==DEFAULT_WEIGHTS.dens||w.recent!==DEFAULT_WEIGHTS.recent)q.set("p",`${w.pop}-${w.dist}-${w.dens}-${w.recent}`);
+ if(w.pop!==DEFAULT_WEIGHTS.pop||w.dist!==DEFAULT_WEIGHTS.dist||w.dens!==DEFAULT_WEIGHTS.dens||w.recent!==DEFAULT_WEIGHTS.recent||w.isol!==DEFAULT_WEIGHTS.isol)q.set("p",`${w.pop}-${w.dist}-${w.dens}-${w.recent}-${w.isol}`);
  const qs=q.toString();
  window.history.replaceState(null,"",window.location.pathname+(qs?"?"+qs:"")+window.location.hash);
 }
@@ -113,28 +115,6 @@ function CountUp({value,dur=650}:{value:number;dur?:number}){
 // scoreAll appelle ceci une fois par ligne et par critère (≈5 × 1372 fois) : trier le tableau
 // à chaque appel (ancienne version) coûtait O(n² log n) et faisait "caler" l'appli à chaque
 // glissement de curseur de pondération. Trier une fois par critère, puis chercher, est en O(n log n).
-function rankOf(sorted:number[],value:number,higher=true){
-  if(!sorted.length) return 0;
-  let lo=0,hi=sorted.length;
-  while(lo<hi){const mid=(lo+hi)>>1;if(sorted[mid]>=value)hi=mid;else lo=mid+1;}
-  const p=lo/(sorted.length-1||1);
-  return (higher?p:1-p)*100;
-}
-function scoreAll(rows:Record<string,any>[],w:{pop:number;dist:number;dens:number;recent:number}){
- return (["Sénégal","Gambie"] as const).flatMap(country=>{const base=rows.filter(r=>r.Pays===country);
-  const nums=(k:string)=>base.map(r=>Number(r[k])).filter(Number.isFinite).sort((a,b)=>a-b);
-  const pop=base.filter(hasPop).map(r=>Number(r.POPULATION)).sort((a,b)=>a-b),dist=nums("Distance bureau (km)"),dens=nums("Autres communautés dans 25 km"),fin=nums("Année Fin PRCC");
-  return base.map(r=>{const items=[
-    ["pop",hasPop(r)?rankOf(pop,Number(r.POPULATION),true):undefined,w.pop],
-    ["dist",Number.isFinite(Number(r["Distance bureau (km)"]))?rankOf(dist,Number(r["Distance bureau (km)"]),false):undefined,w.dist],
-    ["dens",Number.isFinite(Number(r["Autres communautés dans 25 km"]))?rankOf(dens,Number(r["Autres communautés dans 25 km"]),true):undefined,w.dens],
-    ["recent",Number.isFinite(Number(r["Année Fin PRCC"]))?rankOf(fin,Number(r["Année Fin PRCC"]),true):undefined,w.recent]
-  ] as [string,number|undefined,number][];
-  const avail=items.filter(x=>x[1]!==undefined),den=avail.reduce((s,x)=>s+x[2],0),totalW=items.reduce((s,x)=>s+x[2],0),score=den?avail.reduce((s,x)=>s+(x[1]!/100*x[2]),0)/den*100:0;
-  return {...r,score,coverage:totalW?Math.round(den/totalW*100):0,scores:Object.fromEntries(items.map(x=>[x[0],x[1]===undefined?null:x[1]/100*x[2]]))};
- }).sort((a,b)=>b.score-a.score).map((r,i)=>({...r,rank:i+1} as Community));
- }) as Community[];
-}
 function Stats({data,targets}:{data:Community[];targets:{Sénégal:number;Gambie:number}}){
  const selected=data.filter(r=>r.selected).length;
  const snN=data.filter(r=>r.Pays==="Sénégal").length,gmN=data.filter(r=>r.Pays==="Gambie").length;
@@ -164,6 +144,9 @@ function LangsPanel({data}:{data:Community[]}){
   </div>;})}
  </div>;
 }
+// Déstructuration volontaire des deps : `center` est un littéral recréé à chaque rendu, le comparer
+// par référence ferait recentrer la carte en continu.
+// eslint-disable-next-line react-hooks/exhaustive-deps
 function Recenter({center}:{center:[number,number]}){const map=useMap();useEffect(()=>{map.setView(center,6)},[map,center[0],center[1]]);return null}
 // Plein écran natif (API Fullscreen du navigateur) pour inspecter les points de plus près.
 function FullscreenControl(){
@@ -185,9 +168,16 @@ function CommunitiesTable({ rows, onSelect, preset }: { rows: Community[]; onSel
   const [sortKey, setSortKey] = useState("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [flt, setFlt] = useState<Record<string, string>>(() => ({ ...preset }));
-  // Applique un préréglage venu d'ailleurs (ex. clic sur « Par bureau » dans Analyse spatiale).
+  // Applique un préréglage venu d'ailleurs (ex. clic sur « Par bureau » dans Analyse spatiale) — ajusté
+  // pendant le rendu plutôt que dans un effet (pas de rendu supplémentaire, voir doc React « You Might
+  // Not Need an Effect »). `appliedPreset` retient la dernière signature déjà appliquée pour ne réagir
+  // qu'à un VRAI changement de préréglage, pas à chaque rendu.
   const presetSig = JSON.stringify(preset ?? {});
-  useEffect(() => { setFlt((p) => ({ ...p, ...JSON.parse(presetSig) })); }, [presetSig]);
+  const [appliedPreset, setAppliedPreset] = useState(presetSig);
+  if (presetSig !== appliedPreset) {
+    setAppliedPreset(presetSig);
+    setFlt((p) => ({ ...p, ...JSON.parse(presetSig) }));
+  }
   const langOptions = useMemo(() => Array.from(new Set(rows.map((r) => r["Langue normalisée"]).filter(Boolean) as string[])).sort(), [rows]);
 
   const cols: CCol[] = [
@@ -289,21 +279,33 @@ export default function App(){
  // Sur mobile la barre d'onglets défile horizontalement (4 onglets ne tiennent pas sur un écran de téléphone) :
  // sans ceci, taper un onglet situé hors champ le laisse coupé au bord après le défilement manuel.
  const tabstripRef=useRef<HTMLElement>(null);
- const [targets,setTargets]=useState({Sénégal:642,Gambie:161}),[weights,setWeights]=useState(urlInit.weights);
+ // communities.json (946 communautés, ~1,2 Mo) est chargé à la demande au premier affichage plutôt
+ // qu'importé statiquement : comme les autres données volumineuses (routes, points OSM), il n'alourdit
+ // ainsi plus le bundle JS évalué avant que la page soit interactive.
+ const [communities,setCommunities]=useState<Record<string,any>[]|null>(null);
+ useEffect(()=>{fetch(`${import.meta.env.BASE_URL}data/communities.json`).then(r=>r.json()).then(setCommunities).catch(()=>setCommunities([]));},[]);
+ // Identifiant stable, indépendant du rang/score (le rang change à chaque pondération — s'en servir
+ // comme clé React forçait Leaflet à détruire/recréer ~1300 marqueurs à chaque glissement de curseur).
+ const communitiesIndexed=useMemo(()=>(communities??[]).map((r,i)=>({...r,_srcId:`row#${i}`})),[communities]);
+ const [weights,setWeights]=useState(urlInit.weights);
  const [toast,setToast]=useState(false);const firstW=useRef(true);
  useEffect(()=>{if(firstW.current){firstW.current=false;return;}setToast(true);const id=window.setTimeout(()=>setToast(false),1600);return ()=>window.clearTimeout(id);},[weights]);
  useEffect(()=>{tabstripRef.current?.querySelector(".active")?.scrollIntoView({inline:"nearest",block:"nearest",behavior:"smooth"});},[tab]);
  useEffect(()=>{writeUrlState({tab,country,region,lang,bureau,query,only,weights});},[tab,country,region,lang,bureau,query,only,weights]);
- useEffect(()=>{if(tab==="spatial"){setRegion("Toutes");setLang("Toutes");setBureau("Tous");}},[tab]);
- const base=useMemo(()=>scoreAll(communitiesIndexed,weights),[weights]);
- const data=useMemo(()=>base.map(r=>{const t=targets[r.Pays as "Sénégal"|"Gambie"];return {...r,selected:r.rank<=t,_id:r._srcId} as Community}),[base,targets]);
+ // Réinitialise région/langue/bureau en entrant sur l'onglet spatial (ces filtres n'y sont pas affichés) —
+ // ajusté pendant le rendu plutôt que dans un effet ; prevTab permet de ne réagir qu'au changement d'onglet.
+ const [prevTab,setPrevTab]=useState(tab);
+ if(tab!==prevTab){setPrevTab(tab);if(tab==="spatial"){setRegion("Toutes");setLang("Toutes");setBureau("Tous");}}
+ const base=useMemo(()=>scoreAll(communitiesIndexed,weights),[communitiesIndexed,weights]);
+ const data=useMemo(()=>base.map(r=>{const t=TARGETS[r.Pays as "Sénégal"|"Gambie"];return {...r,selected:r.rank<=t,_id:r._srcId} as Community}),[base]);
  const regions=Array.from(new Set(data.filter(r=>country==="Tous"||r.Pays===country).map(r=>r.Région))).sort(),langs=Array.from(new Set(data.map(r=>r["Langue normalisée"]))).sort();
  const filtered=data.filter(r=>(country==="Tous"||r.Pays===country)&&(region==="Toutes"||r.Région===region)&&(lang==="Toutes"||r["Langue normalisée"]===lang)&&(bureau==="Tous"||r.Bureau===bureau)&&(!only||r.selected)&&(!query||String(r.Communauté).toLowerCase().includes(query.toLowerCase())||String(r["code communaute"]).toLowerCase().includes(query.toLowerCase())));
  const mapRows=filtered.filter(r=>r.selected?showSel:showUnsel);
  const center:[number,number]=country==="Gambie"?[13.45,-15.2]:[14.2,-14.7];
- return <div className="app"><div className="chrome"><div className="topbar"><div className="brand"><div className="logo">H</div><div><b>HERS · Sélection des communautés pilotes</b><span>Tableau de bord géospatial · Sénégal &amp; Gambie</span><span className="brand-meta">{base.length} communautés · 5 bureaux</span></div></div><nav className="tabstrip" ref={tabstripRef}><button className={tab==="dashboard"?"active":""} onClick={()=>setTab("dashboard")}><BarChart3 size={18}/>Vue d'ensemble</button><button className={tab==="communities"?"active":""} onClick={()=>setTab("communities")}><Users size={18}/>Communautés</button><button className={tab==="spatial"?"active":""} onClick={()=>setTab("spatial")}><MapIcon size={18}/>Analyse spatiale</button><button className={tab==="method"?"active":""} onClick={()=>setTab("method")}><FileText size={18}/>Méthode</button></nav><div className="topbar-actions"><div className="consult-pill"><span>Consultations</span><strong><CountUp value={targets.Sénégal+targets.Gambie}/></strong><small>{targets.Sénégal} Sénégal · {targets.Gambie} Gambie</small></div></div></div></div>
+ if(communities===null)return <div className="app-loading"><div className="logo">H</div><p>Chargement des communautés…</p></div>;
+ return <div className="app"><div className="chrome"><div className="topbar"><div className="brand"><div className="logo">H</div><div><b>HERS · Sélection des communautés pilotes</b><span>Tableau de bord géospatial · Sénégal &amp; Gambie</span><span className="brand-meta">{base.length} communautés · 5 bureaux</span></div></div><nav className="tabstrip" ref={tabstripRef}><button className={tab==="dashboard"?"active":""} onClick={()=>setTab("dashboard")}><BarChart3 size={18}/>Vue d'ensemble</button><button className={tab==="communities"?"active":""} onClick={()=>setTab("communities")}><Users size={18}/>Communautés</button><button className={tab==="spatial"?"active":""} onClick={()=>setTab("spatial")}><MapIcon size={18}/>Analyse spatiale</button><button className={tab==="method"?"active":""} onClick={()=>setTab("method")}><FileText size={18}/>Méthode</button></nav><div className="topbar-actions"><div className="consult-pill"><span>Consultations</span><strong><CountUp value={TARGETS.Sénégal+TARGETS.Gambie}/></strong><small>{TARGETS.Sénégal} Sénégal · {TARGETS.Gambie} Gambie</small></div></div></div></div>
  <main>
- {tab!=="spatial"&&tab!=="method"&&<Stats data={data} targets={targets}/>}
+ {tab!=="spatial"&&tab!=="method"&&<Stats data={data} targets={TARGETS}/>}
  {tab!=="communities"&&tab!=="method"&&<>
  <p className="section-eyebrow">{tab==="spatial"?"Filtres qui affinent la carte analytique":"Filtres"}</p>
  <div className="toolbar"><div className="search"><Search size={18}/><input placeholder="Rechercher une communauté…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
@@ -315,17 +317,17 @@ export default function App(){
  <div className="rail">
  <div className="hint-panel"><MapPin size={20}/><div><b>Explorer la carte</b><span>Cliquez sur une communauté pour afficher son profil détaillé.</span></div></div>
  <LangsPanel data={data}/>
- <div className="side-card weight-card"><div className="card-title"><SlidersHorizontal size={17}/> Pondération du score</div><p className="muted">Testez différents scénarios. Le score est recalculé automatiquement.</p>{([["pop","Population","Nombre d'habitants de la communauté"],["dist","Distance bureau","Distance au bureau de coordination le plus proche"],["dens","Densité / proximité","Nombre d'autres communautés dans un rayon de 25 km"],["recent","Récence PRCC","Ancienneté de la fin du PRCC : plus c'est récent, mieux c'est"]] as [string,string,string][]).map(([k,l,tip])=>{const v=(weights as any)[k];const p=v/50*100;return <div className="weight" key={k}><span className="wlabel" data-tip={tip}>{withPrcc(l)}</span><input type="range" min={0} max={50} step={5} value={v} style={{background:`linear-gradient(90deg,#60a5fa 0 ${p}%,#e2e8f0 ${p}% 100%)`}} onChange={e=>setWeights({...weights,[k]:Number(e.target.value)})}/><b className="wval">{v}</b></div>;})}<div className="weight-total"><span>Total</span><b>{Object.values(weights).reduce((a,b)=>a+b,0)}</b><small>/ 100</small><div className="wprog"><i style={{width:`${Math.min(100,Object.values(weights).reduce((a,b)=>a+b,0))}%`}}/></div></div><button className="linkbtn" onClick={()=>setWeights({pop:0,dist:45,dens:20,recent:35})}>Réinitialiser</button><button className="linkbtn" onClick={()=>{setTab("method");window.scrollTo({top:0,behavior:"smooth"})}}>Comment ce score est-il calculé ? → Méthode</button><div className="callout"><b>Langue</b><span>La langue n'influence pas le score, mais on vérifie qu'aucune langue n'est mise de côté par les autres critères. Utile pour anticiper les besoins en animateurs par langue.</span></div><div className="callout warn"><b>Population</b><span>Donnée manquante pour 38 % du Sénégal et 37 % de la Gambie (pour la Gambie, valeurs 2024 estimées à partir du recensement 2013, pas un comptage direct). Poids maintenu à 0 % par défaut pour ne pas pénaliser les communautés sans chiffre.</span></div></div>
+ <div className="side-card weight-card"><div className="card-title"><SlidersHorizontal size={17}/> Pondération du score</div><p className="muted">Testez différents scénarios. Le score est recalculé automatiquement.</p>{([["pop","Population","Nombre d'habitants de la communauté"],["dist","Distance bureau","Distance au bureau de coordination le plus proche"],["dens","Densité / proximité","Nombre d'autres communautés dans un rayon de 25 km"],["recent","Récence PRCC","Ancienneté de la fin du PRCC : plus c'est récent, mieux c'est"],["isol","Non-isolement (non-PRCC)","Distance au village non-PRCC le plus proche (source OpenStreetMap) : plus c'est proche, mieux c'est"]] as [string,string,string][]).map(([k,l,tip])=>{const v=(weights as any)[k];const p=v/50*100;return <div className="weight" key={k}><span className="wlabel" data-tip={tip}>{withPrcc(l)}</span><input type="range" min={0} max={50} step={5} value={v} style={{background:`linear-gradient(90deg,#60a5fa 0 ${p}%,#e2e8f0 ${p}% 100%)`}} onChange={e=>setWeights({...weights,[k]:Number(e.target.value)})}/><b className="wval">{v}</b></div>;})}<div className="weight-total"><span>Total</span><b>{Object.values(weights).reduce((a,b)=>a+b,0)}</b><small>/ 100</small><div className="wprog"><i style={{width:`${Math.min(100,Object.values(weights).reduce((a,b)=>a+b,0))}%`}}/></div></div><button className="linkbtn" onClick={()=>setWeights({pop:0,dist:45,dens:20,recent:35,isol:0})}>Réinitialiser</button><button className="linkbtn" onClick={()=>{setTab("method");window.scrollTo({top:0,behavior:"smooth"})}}>Comment ce score est-il calculé ? → Méthode</button><div className="callout"><b>Langue</b><span>La langue n'influence pas le score, mais on vérifie qu'aucune langue n'est mise de côté par les autres critères. Utile pour anticiper les besoins en animateurs par langue.</span></div><div className="callout warn"><b>Population</b><span>Donnée manquante pour 38 % du Sénégal et 37 % de la Gambie (pour la Gambie, valeurs 2024 estimées à partir du recensement 2013, pas un comptage direct). Poids maintenu à 0 % par défaut pour ne pas pénaliser les communautés sans chiffre.</span></div></div>
  <div className="table-card"><div className="card-head"><div><h2>Top communautés</h2><span>Classement par score</span></div><button onClick={()=>setTab("communities")}>Voir tout <ChevronRight size={16}/></button></div><Table rows={filtered.slice(0,12)} onSelect={setDrawer}/></div>
  </div></section>
  :<section className="table-card full"><div className="card-head"><div><h2>Toutes les communautés</h2><span>Tri et filtres dans les en-têtes du tableau</span></div></div><CommunitiesTable rows={data} onSelect={setDrawer} preset={{Bureau: bureau!=="Tous"?bureau:"", Pays: country!=="Tous"?country:""}}/></section>}
  </main>
  {toast&&<div className="toast" role="status">Score recalculé ✓</div>}
- {drawer&&createPortal(<div className="drawer-backdrop" onClick={()=>setDrawer(null)}><aside className="drawer" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setDrawer(null)}><X/></button><span className="rank">RANG #{drawer.rank}</span><h2>{drawer.Communauté}</h2><div className="score-big">{drawer.score.toFixed(1)}<small>/100</small></div><div className={drawer.selected?"status":"status off"}>{drawer.selected?"Sélectionnée pour consultation":"Hors sélection"}</div><div className="details">{[["Pays",drawer.Pays],["Région",drawer.Région],["Commune",drawer.Commune],["Langue",drawer["Langue normalisée"]],["PRCC",`${drawer["Année Début PRCC"]} → ${drawer["Année Fin PRCC"]}`],["Bureau",drawer.Bureau],["Distance",`${Number(drawer["Distance bureau (km)"]).toFixed(1)} km`],["Population",drawer.POPULATION?Number(drawer.POPULATION).toLocaleString("fr-FR")+(drawer["Population source"]?" (est. 2024)":""):"Non disponible"],["Coordonnées",`${Number(drawer["Latitude référence"]).toFixed(5)}, ${Number(drawer["Longitude référence"]).toFixed(5)}`]].map(x=><div key={x[0]}><span>{withPrcc(x[0])}</span><b>{x[1]}</b></div>)}</div>{drawer["Population source"]&&<div className="callout"><b>Population estimée</b><span>{drawer["Population source"]}. La Gambie n'a pas de recensement village par village plus récent que 2013 ; ce chiffre est ajusté à la croissance réelle 2013-2024 de la région, pas un comptage direct.</span></div>}<h3>Détail du score</h3>{Object.entries({pop:"Population",dist:"Distance",dens:"Densité",recent:"Récence PRCC"}).map(([k,l])=><div className="score-row" key={k}><span>{withPrcc(l)}</span><b>{drawer.scores[k]===null?"n/d":`${drawer.scores[k]!.toFixed(1)} pts`}</b></div>)}<div className="coverage">Score calculé sur <b>{drawer.coverage}%</b> des critères disponibles pour cette communauté. Les données manquantes ne pénalisent pas le classement.</div>
+ {drawer&&createPortal(<div className="drawer-backdrop" onClick={()=>setDrawer(null)}><aside className="drawer" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setDrawer(null)}><X/></button><span className="rank">RANG #{drawer.rank}</span><h2>{drawer.Communauté}</h2><div className="score-big">{drawer.score.toFixed(1)}<small>/100</small></div><div className={drawer.selected?"status":"status off"}>{drawer.selected?"Sélectionnée pour consultation":"Hors sélection"}</div><div className="details">{[["Pays",drawer.Pays],["Région",drawer.Région],["Commune",drawer.Commune],["Langue",drawer["Langue normalisée"]],["PRCC",`${drawer["Année Début PRCC"]} → ${drawer["Année Fin PRCC"]}`],["Bureau",drawer.Bureau],["Distance",`${Number(drawer["Distance bureau (km)"]).toFixed(1)} km`],["Population",drawer.POPULATION?Number(drawer.POPULATION).toLocaleString("fr-FR")+(drawer["Population source"]?" (est. 2024)":""):"Non disponible"],["Coordonnées",`${Number(drawer["Latitude référence"]).toFixed(5)}, ${Number(drawer["Longitude référence"]).toFixed(5)}`]].map(x=><div key={x[0]}><span>{withPrcc(x[0])}</span><b>{x[1]}</b></div>)}</div>{drawer["Population source"]&&<div className="callout"><b>Population estimée</b><span>{drawer["Population source"]}. La Gambie n'a pas de recensement village par village plus récent que 2013 ; ce chiffre est ajusté à la croissance réelle 2013-2024 de la région, pas un comptage direct.</span></div>}<h3>Détail du score</h3>{Object.entries({pop:"Population",dist:"Distance",dens:"Densité",recent:"Récence PRCC",isol:"Non-isolement"}).map(([k,l])=><div className="score-row" key={k}><span>{withPrcc(l)}</span><b>{drawer.scores[k]===null?"n/d":`${drawer.scores[k]!.toFixed(1)} pts`}</b></div>)}<div className="coverage">Score calculé sur <b>{drawer.coverage}%</b> des critères disponibles pour cette communauté. Les données manquantes ne pénalisent pas le classement.</div>
 <div className="callout" style={{marginTop:12}}><b>Contexte spatial</b><span>Indicateurs mesurés qui n'entrent pas dans le score de sélection. Distances à vol d'oiseau (OpenStreetMap).</span></div>
 <h3>Contexte spatial</h3>
 {([["Accessibilité (distance au bureau)",accessScore(drawer)],["Accès route",roadAccessScore(drawer)],["Potentiel agricole (5 km)",agriScore(drawer)]] as [string,number][]).map(([label,val])=><div className="score-row" key={label}><span>{label}</span><b>{val.toFixed(0)}/100</b></div>)}
-{([["Ville la plus proche","dist_ville_km"],["Marché le plus proche","dist_marche_osm_km"],["Point d'eau le plus proche","dist_eau_osm_km"]] as [string,string][]).map(([label,field])=><div className="score-row" key={label}><span>{label}</span><b>{Number.isFinite(Number(drawer[field]))?`${Number(drawer[field]).toFixed(1)} km`:"n/d"}</b></div>)}
+{([["Ville la plus proche","dist_ville_km"],["Marché le plus proche","dist_marche_osm_km"],["Point d'eau le plus proche","dist_eau_osm_km"],["Village non-PRCC le plus proche","dist_non_prcc_osm_km"]] as [string,string][]).map(([label,field])=><div className="score-row" key={label}><span>{label}</span><b>{Number.isFinite(Number(drawer[field]))?`${Number(drawer[field]).toFixed(1)} km${field==="dist_non_prcc_osm_km"&&drawer.nom_non_prcc_osm?` (${drawer.nom_non_prcc_osm})`:""}`:"n/d"}</b></div>)}
 <div className="coverage">Indice de potentiel spatial : <b>{indiceSpatial(drawer).toFixed(0)}/100</b><br/><small>{indiceSpatial(drawer)>=60?"Potentiel élevé":indiceSpatial(drawer)>=40?"Potentiel moyen":"Potentiel limité"} · combine accessibilité, potentiel agricole et densité locale</small></div></aside></div>,fsEl||document.body)}
  </div>
 }
